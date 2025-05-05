@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ahoy.io</title>
+  <link rel="stylesheet" href="index.css" />
+
+</head>
+<body>
+  <div id="homeScreen">
+    <div class="container">
+      <h1>Ahoy.io</h1>
+
+      <!-- Main Menu -->
+      <div id="mainMenuScreen" class="section">
+        <button id="singlePlayerMenuButton">Single Player</button>
+        <button id="joinLobbyMenuButton">Join Lobby</button> 
+        <button id="createLobbyMenuButton">Create Lobby</button>
+      </div>
+
+      <!-- Single Player Menu -->
+      <div id="singlePlayerMenuScreen" class="section hidden">
+        <button id="singlePlayerStartButton">Start Game</button>
+      </div>
+
+    </div>
+  </div>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+  <script type="multiplayer" src="/multiplayer.js"></script>
+
+
+</body>
+</html>

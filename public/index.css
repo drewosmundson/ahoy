@@ -1,0 +1,196 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  body {
+    background-color: #0a192f;
+    color: #e6f1ff;
+    overflow: hidden;
+    background-image: linear-gradient(to bottom, #0a192f, #1f4068);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  
+  
+  #homeScreen {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path fill="%231E90FF" fill-opacity="0.05" d="M50 0 L100 50 L50 100 L0 50 Z" /></svg>');
+    background-size: 50px 50px;
+  }
+  
+  .container {
+    background-color: rgba(30, 42, 73, 0.9);
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 520px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.5s ease-out;
+    border: 1px solid rgba(126, 208, 255, 0.2);
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .container::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: linear-gradient(45deg, #1E90FF, #4682B4, #1E90FF);
+    z-index: -1;
+    filter: blur(20px);
+    opacity: 0.3;
+  }
+  canvas {
+    display: block;
+  }
+  
+  
+  /* Canvas Styling */
+  /* set to 100 100 if ever an issue with margin on top or bottom */
+  #gameCanvas {
+    display: none;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    background-color: #151c28;
+    max-width: 98vw;
+    max-height: 98vh; 
+  }
+  
+  h1 {
+    color: #64ffda;
+    margin-bottom: 30px;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+    position: relative;
+  }
+  
+  h1::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #64ffda, transparent);
+    margin: 10px auto 0;
+  }
+  
+  h2 {
+    color: #7ed0ff;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+  }
+  
+  .section {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  button {
+    background: linear-gradient(135deg, #1E90FF, #4682B4);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 10px 5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(30, 144, 255, 0.4);
+    background: linear-gradient(135deg, #4682B4, #1E90FF);
+  }
+  
+  button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(30, 144, 255, 0.3);
+  }
+  
+  button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 200%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(45deg);
+    transition: 0.3s;
+  }
+  
+  button:hover::after {
+    left: 100%;
+  }
+  
+  #singlePlayerMenuButton, #createLobbyMenuButton, #joinLobbyMenuButton, #singlePlayerButton {
+    width: 180px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    margin: 10px 15px;
+  }
+  
+  #singlePlayerStartButton {
+    width: 180px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    margin: 10px 15px;
+    background: linear-gradient(135deg, #32CD32, #228B22);
+    box-shadow: 0 4px 12px rgba(50, 205, 50, 0.3);
+  }
+  
+  #singlePlayerStartButton:hover {
+    background: linear-gradient(135deg, #228B22, #32CD32);
+    box-shadow: 0 6px 15px rgba(50, 205, 50, 0.4);
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .container {
+      padding: 15px;
+    }
+    
+    .section {
+      padding: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 2rem;
+    }
+    
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+  
+  

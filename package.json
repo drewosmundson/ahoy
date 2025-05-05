@@ -1,0 +1,43 @@
+{
+  "name": "ahoy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drewosmundson/ahoy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/drewosmundson/ahoy/issues"
+  },
+  "homepage": "https://github.com/drewosmundson/ahoy#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "noisejs": "^2.1.0",
+    "npm": "^11.3.0",
+    "socket": "^0.14.154",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "three": "^0.176.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.4"
+  },
+  "compilerOptions": {
+    "paths": {
+      "three/webgpu": [
+        "node_modules/three/build/three.webgpu.js"
+      ],
+      "three/tsl": [
+        "node_modules/three/build/three.tsl.js"
+      ]
+    }
+  }
+}
