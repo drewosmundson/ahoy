@@ -1,5 +1,9 @@
 
-import { Game } from './game.js';
+
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
+
+
+import { Game } from './Game.js';
 
 
 
@@ -36,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     game = new Game(gameCanvas);
     game.start();
+    window.addEventListener('resize', game.handleWindowResize);
+
     window.game = game; // for debugging
   });
 });

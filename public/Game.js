@@ -11,6 +11,7 @@ export class Game {
     this.mapSize = 256; // Default map size for terrain
     this.waterMapSize = 64; // Size for water geometry (less detail needed)
     this.waterLevel = 5; // Default water level height
+    this.lowPoly = false; // Default terrain mode (false = regular, true = low poly)
     
     // Call initialization methods to set up the renderer, camera
     this.initializeRenderer();
@@ -40,6 +41,9 @@ export class Game {
     // Initialize boat
     this.createBoat();
     
+    // Add skybox to the scene
+    this.loadSkybox();
+
     // Add event listeners for keyboard controls
     this.initializeBoatControls();
 
@@ -77,7 +81,7 @@ export class Game {
   // Sets up lighting in the scene
   initializeLighting() {
     // Create a directional light that simulates sunlight
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // white light, full intensity
+    const directionalLight = new THREE.DirectionalLight(0xFFF5EE, 1); // white light, full intensity
     directionalLight.position.set(50, 50, 50); // position it high and to the side
     this.scene.add(directionalLight); // add light to the scene
 
@@ -100,7 +104,7 @@ export class Game {
   // Setup the scene with terrain and other objects
   setupScene() {
     // Add a grid helper for reference
-    const gridHelper = new THREE.GridHelper(100, 10);
+    const gridHelper = new THREE.GridHelper(200, 10);
     this.scene.add(gridHelper);
     
     // Generate perlin noise for the terrain
@@ -113,6 +117,118 @@ export class Game {
     // Add water plane with waves
     this.water = this.createWater();
     this.scene.add(this.water);
+  }
+
+  // Load skybox textures and create skybox
+  loadSkybox() {
+    // Define paths to the six skybox textures
+    const skyboxPaths = {
+      posX: 'resources/images/sideSky.png',
+      negX: 'resources/images/sideSky.png',
+      posY: 'resources/images/topSky.png',
+      negY: 'resources/images/topSky.png',
+      posZ: 'resources/images/sideSky.png',
+      negZ: 'resources/images/sideSky.png'
+    };
+
+    // Create a texture loader
+    const loader = new THREE.TextureLoader();
+    
+    // Create an array to hold the textures
+    const textures = {
+      right: null,
+      left: null,
+      top: null,
+      bottom: null,
+      front: null,
+      back: null
+    };
+
+    // Counter to track loading progress
+    let loadedCount = 0;
+    const totalTextures = 6;
+    
+    // Function to create skybox once all textures are loaded or failed
+    const createSkybox = () => {
+      // Create an array of materials for each face of the cube
+      const materials = [];
+      
+      // Check each texture and use either the loaded texture or a fallback
+      const sides = ['right', 'left', 'top', 'bottom', 'front', 'back'];
+      const defaultColors = [0x3366ff, 0x3366ff, 0x99ccff, 0x336633, 0x3366ff, 0x3366ff]; // Blue and green fallback colors
+      
+      for (let i = 0; i < sides.length; i++) {
+        const texture = textures[sides[i]];
+        
+        if (texture) {
+          // Use loaded texture
+          materials.push(new THREE.MeshBasicMaterial({ 
+            map: texture, 
+            side: THREE.BackSide 
+          }));
+        } else {
+          // Use fallback color
+          materials.push(new THREE.MeshBasicMaterial({ 
+            color: defaultColors[i], 
+            side: THREE.BackSide 
+          }));
+        }
+      }
+      
+      // Create a large cube that surrounds the scene
+      const skyboxGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
+      this.skybox = new THREE.Mesh(skyboxGeometry, materials);
+      
+      // Add to scene
+      this.scene.add(this.skybox);
+      
+      console.log('Skybox created with ' + loadedCount + ' of ' + totalTextures + ' textures loaded successfully');
+    };
+    
+    // Load each texture with success and error handlers
+    const loadTexture = (path, side) => {
+      loader.load(
+        path,
+        // Success handler
+        (texture) => {
+          textures[side] = texture;
+          loadedCount++;
+          
+          // If all textures have been processed (loaded or failed), create the skybox
+          if (loadedCount === totalTextures) {
+            createSkybox();
+          }
+        },
+        // Progress handler
+        undefined,
+        // Error handler
+        (error) => {
+          console.warn(`Failed to load skybox texture ${side}: ${error.message}`);
+          loadedCount++;
+          
+          // Even on failure, increment counter so we know when all attempts are done
+          if (loadedCount === totalTextures) {
+            createSkybox();
+          }
+        }
+      );
+    };
+    
+    // Start loading textures
+    loadTexture(skyboxPaths.posX, 'right');
+    loadTexture(skyboxPaths.negX, 'left');
+    loadTexture(skyboxPaths.posY, 'top');
+    loadTexture(skyboxPaths.negY, 'bottom');
+    loadTexture(skyboxPaths.posZ, 'front');
+    loadTexture(skyboxPaths.negZ, 'back');
+    
+    // Set a backup timeout in case textures fail to load
+    setTimeout(() => {
+      if (loadedCount < totalTextures) {
+        console.warn('Timed out waiting for some skybox textures, creating skybox with loaded textures only');
+        createSkybox();
+      }
+    }, 10000); // 10 second timeout
   }
 
   // Generate perlin noise heightmap
@@ -130,9 +246,9 @@ export class Game {
       this.heightmap[y] = [];
       for (let x = 0; x < size; x++) {
         // Get noise value with multiple octaves for more natural terrain
-        let value = 0;
-        let amplitude = 1.0;
-        let frequency = 1;
+        let value = -0.7;
+        let amplitude = 1;
+        let frequency = 0.7;
         let maxValue = 0;
         
         // Add multiple octaves of noise
@@ -173,7 +289,7 @@ export class Game {
         let value = Math.pow(distanceFromCenter, falloffStrength);
         
         // Scale falloff effect (0 = no effect, 1 = full effect)
-        const falloffScale = 0.7; // Adjust to control island size
+        const falloffScale = 0.8; // Adjust to control island size
         value *= falloffScale;
         
         // Ensure value is in range [0,1]
@@ -187,17 +303,40 @@ export class Game {
   // Create terrain from heightmap
   createTerrain() {
     const size = this.mapSize;
-    const geometry = new THREE.PlaneGeometry(100, 100, size - 1, size - 1);
-    geometry.rotateX(-Math.PI / 2); // Make horizontal
+    let geometry;
     
-    // Apply heightmap to vertices
-    const vertices = geometry.attributes.position.array;
-    for (let i = 0, j = 0; i < vertices.length; i += 3, j++) {
-      const x = Math.floor(j % size);
-      const y = Math.floor(j / size);
+    if (this.lowPoly) {
+      // Create low-poly terrain with fewer segments and random height variation
+      const segmentCount = Math.floor(size / 8); // Fewer segments = more visible polygons
+      geometry = new THREE.PlaneGeometry(100, 100, segmentCount, segmentCount);
+      geometry.rotateX(-Math.PI / 2); // Make horizontal
       
-      if (x < size && y < size) {
-        vertices[i + 1] = this.heightmap[y][x] * 15; // Y-axis is up, scale height by 15
+      // Apply heightmap to vertices with random variation for jagged look
+      const vertices = geometry.attributes.position.array;
+      for (let i = 0, j = 0; i < vertices.length; i += 3, j++) {
+        const x = Math.floor((j % (segmentCount + 1)) * (size / segmentCount));
+        const y = Math.floor(Math.floor(j / (segmentCount + 1)) * (size / segmentCount));
+        
+        if (x < size && y < size) {
+          // Add some random variation to make it more jagged
+          const randomHeight = Math.random() * 0.8;
+          vertices[i + 1] = this.heightmap[y < size ? y : size-1][x < size ? x : size-1] * 20 + randomHeight;
+        }
+      }
+    } else {
+      // Create regular terrain with more detail
+      geometry = new THREE.PlaneGeometry(100, 100, size - 1, size - 1);
+      geometry.rotateX(-Math.PI / 2); // Make horizontal
+      
+      // Apply heightmap to vertices
+      const vertices = geometry.attributes.position.array;
+      for (let i = 0, j = 0; i < vertices.length; i += 3, j++) {
+        const x = Math.floor(j % size);
+        const y = Math.floor(j / size);
+        
+        if (x < size && y < size) {
+          vertices[i + 1] = this.heightmap[y][x] * 20; // Y-axis is up, scale height by 20
+        }
       }
     }
     
@@ -207,13 +346,31 @@ export class Game {
     // Create materials for the terrain
     const material = new THREE.MeshStandardMaterial({
       color: 0x3d8c40,
-      flatShading: false,
+      flatShading: this.lowPoly, // Use flat shading for low poly mode
       wireframe: false,
       vertexColors: false
     });
     
     // Create terrain mesh and return it
     return new THREE.Mesh(geometry, material);
+  }
+  
+  // Method to toggle between low poly and regular terrain
+  toggleTerrainMode() {
+    // Toggle the lowPoly flag
+    this.lowPoly = !this.lowPoly;
+    
+    // Remove current terrain
+    this.scene.remove(this.terrain);
+    
+    // Create new terrain with updated mode
+    this.terrain = this.createTerrain();
+    
+    // Add new terrain to scene
+    this.scene.add(this.terrain);
+    
+    console.log(`Terrain mode: ${this.lowPoly ? 'Low Poly' : 'Regular'}`);
+    return this.lowPoly ? 'Low Poly' : 'Regular';
   }
   
   // Create water with animated waves
@@ -251,8 +408,6 @@ export class Game {
   createBoat() {
     // Create boat group to hold all boat parts
     this.boat = new THREE.Group();
-    
-
     
     // Create boat cabin
     const cabinGeometry = new THREE.BoxGeometry(2, 1, 2);
@@ -310,6 +465,9 @@ export class Game {
           break;
         case 'c': // Switch camera mode
           this.toggleCameraMode();
+          break;
+        case 'p': // Toggle terrain mode (low poly / regular)
+          this.toggleTerrainMode();
           break;
       }
     });
@@ -431,7 +589,7 @@ export class Game {
       
       // Only move if the boat would be over water (terrain height < water level)
       // Set collision threshold lower than water level to create buoyancy effect
-      if (terrainHeight < this.waterLevel + 0.5) { // Larger buffer to allow shallow water navigation
+      if (terrainHeight < this.waterLevel - 1) { // Larger buffer to allow shallow water navigation
         boatPosition.x = newX;
         boatPosition.z = newZ;
         
@@ -484,7 +642,7 @@ export class Game {
     if (this.water && this.waterVertices) {
       this.updateWaterWaves(time);
     }
-
+    
     // Render the current scene using the camera's perspective
     this.renderer.render(this.scene, this.camera);
   };
