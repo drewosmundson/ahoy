@@ -8,7 +8,9 @@ import { SimplexNoise } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/example
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
-    this.mapSize = 128; // Default map size for terrain
+    this.mapSize = 256; // Default map size for terrain
+    this.waterMapSize = 64; // Size for water geometry (less detail needed)
+    this.waterLevel = 5; // Default water level height
     
     // Call initialization methods to set up the renderer, camera
     this.initializeRenderer();
@@ -20,6 +22,9 @@ export class Game {
 
     // Setup the scene
     this.setupScene();
+
+    // Initialize simplex noise for water waves
+    this.waterNoise = new SimplexNoise();
 
     // Attach an event listener to handle resizing the window
     window.addEventListener('resize', this.handleWindowResize);
@@ -87,8 +92,13 @@ export class Game {
     // Create and add terrain to the scene
     this.terrain = this.createTerrain();
     this.scene.add(this.terrain);
+    
+    // Add water plane with waves
+    this.water = this.createWater();
+    this.scene.add(this.water);
   }
 
+  // Generate perlin noise heightmap
   // Generate perlin noise heightmap
   generatePerlinNoise() {
     // Use SimplexNoise for terrain generation
@@ -96,6 +106,9 @@ export class Game {
     const size = this.mapSize;
     const scale = 0.02; // Adjust for more/less variation
     this.heightmap = [];
+    
+    // Generate falloff map for island effect
+    this.generateFalloffMap(size);
     
     for (let y = 0; y < size; y++) {
       this.heightmap[y] = [];
@@ -116,11 +129,44 @@ export class Game {
         
         // Normalize to range [0, 1]
         value = (value / maxValue + 1) / 2;
+        
+        // Apply falloff map to create island effect
+        const falloffValue = this.falloffMap[y][x];
+        value = Math.max(0, value - falloffValue);
+        
         this.heightmap[y][x] = value;
       }
     }
   }
-
+  
+  generateFalloffMap(size) {
+    this.falloffMap = [];
+    
+    for (let y = 0; y < size; y++) {
+      this.falloffMap[y] = [];
+      for (let x = 0; x < size; x++) {
+        // Calculate normalized position from center (range -1 to 1)
+        const nx = x / (size - 1) * 2 - 1; 
+        const ny = y / (size - 1) * 2 - 1;
+        
+        // Calculate distance from center (0,0)
+        let distanceFromCenter = Math.max(Math.abs(nx), Math.abs(ny));
+        
+        // Apply curve to create sharper falloff near edges
+        const falloffStrength = 3; // Higher values create steeper falloff
+        let value = Math.pow(distanceFromCenter, falloffStrength);
+        
+        // Scale falloff effect (0 = no effect, 1 = full effect)
+        const falloffScale = 0.7; // Adjust to control island size
+        value *= falloffScale;
+        
+        // Ensure value is in range [0,1]
+        value = Math.min(1, Math.max(0, value));
+        
+        this.falloffMap[y][x] = value;
+      }
+    }
+  }
   // Create terrain from heightmap
   createTerrain() {
     const size = this.mapSize;
@@ -152,6 +198,106 @@ export class Game {
     // Create terrain mesh and return it
     return new THREE.Mesh(geometry, material);
   }
+  // Create water with animated waves
+  createWater() {
+    // Create a plane geometry for the water
+    const geometry = new THREE.PlaneGeometry(
+      100, // Slightly larger than terrain (100) to ensure coverage
+      100, 
+      this.waterMapSize - 1, 
+      this.waterMapSize - 1
+    );
+    geometry.rotateX(-Math.PI / 2); // Make horizontal
+    
+    // Store original vertices positions for animation
+    this.waterVertices = geometry.attributes.position.array.slice();
+    
+    // Create a semi-transparent blue material for water
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x0077be,
+      transparent: true,
+      opacity: 0.8,
+      metalness: 0.1,
+      roughness: 0.3,
+      side: THREE.DoubleSide,
+    });
+    
+    // Raise water to desired level
+    geometry.translate(0, this.waterLevel, 0);
+    
+    // Create and return water mesh
+    return new THREE.Mesh(geometry, material);
+  }
+
+
+
+  /**
+   * Animation loop method to be called every frame
+   * @param {number} time - Current time in milliseconds (automatically passed by requestAnimationFrame)
+   */
+  animate = (time) => {
+    // If controls (like OrbitControls) are defined, update them each frame
+    if (this.controls) {
+      this.controls.update();
+    }
+    // Update water waves animation
+    if (this.water && this.waterVertices) {
+      this.updateWaterWaves(time);
+    }
+
+    // Render the current scene using the camera's perspective
+    this.renderer.render(this.scene, this.camera);
+  };
+
+  // Starts the animation loop using the renderer's built-in function
+  start() {
+    this.renderer.setAnimationLoop(this.animate); // starts calling `animate()` repeatedly
+  }
+
+
+
+
+  
+  // Update water waves animation
+  updateWaterWaves(time) {
+    const positions = this.water.geometry.attributes.position.array;
+    const waterSize = this.waterMapSize;
+    
+    // Animation speed and wave parameters
+    const timeScale = 0.0005;
+    const waveHeight = 0.5;
+    const waveFrequency = 0.05;
+    
+    // Animate each vertex
+    for (let i = 0, j = 0; i < positions.length; i += 3, j++) {
+      const originalX = this.waterVertices[i];
+      const originalZ = this.waterVertices[i + 2];
+      
+      // Calculate wave height using perlin noise that moves over time
+      const noiseValue = this.waterNoise.noise(
+        originalX * waveFrequency + time * timeScale, 
+        originalZ * waveFrequency + time * timeScale * 0.8
+      );
+      
+      // Apply wave height (Y-coordinate is index+1)
+      positions[i + 1] = this.waterLevel + noiseValue * waveHeight;
+    }
+    
+    // Update geometry
+    this.water.geometry.attributes.position.needsUpdate = true;
+    this.water.geometry.computeVertexNormals();
+  }
+
+
+
+  // Stops the animation loop by passing null
+  stop() {
+    this.renderer.setAnimationLoop(null); // stops rendering
+  }
+
+
+
+
 
   // Handles resizing the window and maintaining a 16:9 aspect ratio
   handleWindowResize = () => {
@@ -181,27 +327,4 @@ export class Game {
     this.camera.updateProjectionMatrix();
   };
 
-  /**
-   * Animation loop method to be called every frame
-   * @param {number} time - Current time in milliseconds (automatically passed by requestAnimationFrame)
-   */
-  animate = (time) => {
-    // If controls (like OrbitControls) are defined, update them each frame
-    if (this.controls) {
-      this.controls.update();
-    }
-
-    // Render the current scene using the camera's perspective
-    this.renderer.render(this.scene, this.camera);
-  };
-
-  // Starts the animation loop using the renderer's built-in function
-  start() {
-    this.renderer.setAnimationLoop(this.animate); // starts calling `animate()` repeatedly
-  }
-
-  // Stops the animation loop by passing null
-  stop() {
-    this.renderer.setAnimationLoop(null); // stops rendering
-  }
 }
