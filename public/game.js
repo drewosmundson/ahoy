@@ -1,30 +1,30 @@
 // Import the entire Three.js library
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/controls/OrbitControls.js';
+// Import SimplexNoise for terrain generation
+import { SimplexNoise } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/math/SimplexNoise.js';
 
-
-
-// base class for setting up a blank scene with a camera
-// renderer and lighting in threejs template for animate loop
-
-// Define and export the ThreeJsScene class
-export class ThreeJsScene {
-
+// Define and export the Game class
+export class Game {
   constructor(canvas) {
-
     this.canvas = canvas;
+    this.mapSize = 128; // Default map size for terrain
+    
     // Call initialization methods to set up the renderer, camera
     this.initializeRenderer();
     this.initializeCamera();
     // Create a new Three.js scene where all objects will be added
     this.scene = new THREE.Scene();
     this.initializeLighting();
+    this.initializeControls();
+
+    // Setup the scene
+    this.setupScene();
 
     // Attach an event listener to handle resizing the window
     window.addEventListener('resize', this.handleWindowResize);
     // Immediately call the resize handler to set the correct initial canvas size
     this.handleWindowResize();
-    
-    this.renderer.setAnimationLoop(this.animate); // starts calling `animate()` repeatedly
   }
 
   ///////////////////////////////////////////////////
@@ -64,10 +64,97 @@ export class ThreeJsScene {
     this.scene.add(ambientLight); // add ambient light to scene
   }
 
+  // Initialize orbit controls
+  initializeControls() {
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.set(0, 0, 0);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
+    this.controls.rotateSpeed = 0.5;
+    this.controls.zoomSpeed = 0.5;
+    this.controls.update();
+  }
+
+  // Setup the scene with terrain and other objects
+  setupScene() {
+    // Add a grid helper for reference
+    const gridHelper = new THREE.GridHelper(100, 10);
+    this.scene.add(gridHelper);
+    
+    // Generate perlin noise for the terrain
+    this.generatePerlinNoise();
+    
+    // Create and add terrain to the scene
+    this.terrain = this.createTerrain();
+    this.scene.add(this.terrain);
+  }
+
+  // Generate perlin noise heightmap
+  generatePerlinNoise() {
+    // Use SimplexNoise for terrain generation
+    const simplex = new SimplexNoise();
+    const size = this.mapSize;
+    const scale = 0.02; // Adjust for more/less variation
+    this.heightmap = [];
+    
+    for (let y = 0; y < size; y++) {
+      this.heightmap[y] = [];
+      for (let x = 0; x < size; x++) {
+        // Get noise value with multiple octaves for more natural terrain
+        let value = 0;
+        let amplitude = 1.0;
+        let frequency = 1;
+        let maxValue = 0;
+        
+        // Add multiple octaves of noise
+        for (let i = 0; i < 4; i++) {
+          value += amplitude * simplex.noise(x * scale * frequency, y * scale * frequency);
+          maxValue += amplitude;
+          amplitude *= 0.5;
+          frequency *= 2;
+        }
+        
+        // Normalize to range [0, 1]
+        value = (value / maxValue + 1) / 2;
+        this.heightmap[y][x] = value;
+      }
+    }
+  }
+
+  // Create terrain from heightmap
+  createTerrain() {
+    const size = this.mapSize;
+    const geometry = new THREE.PlaneGeometry(100, 100, size - 1, size - 1);
+    geometry.rotateX(-Math.PI / 2); // Make horizontal
+    
+    // Apply heightmap to vertices
+    const vertices = geometry.attributes.position.array;
+    for (let i = 0, j = 0; i < vertices.length; i += 3, j++) {
+      const x = Math.floor(j % size);
+      const y = Math.floor(j / size);
+      
+      if (x < size && y < size) {
+        vertices[i + 1] = this.heightmap[y][x] * 15; // Y-axis is up, scale height by 15
+      }
+    }
+    
+    // Update normals for proper lighting
+    geometry.computeVertexNormals();
+    
+    // Create materials for the terrain
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x3d8c40,
+      flatShading: false,
+      wireframe: false,
+      vertexColors: false
+    });
+    
+    // Create terrain mesh and return it
+    return new THREE.Mesh(geometry, material);
+  }
 
   // Handles resizing the window and maintaining a 16:9 aspect ratio
   handleWindowResize = () => {
-
     // Get the current window dimensions
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;

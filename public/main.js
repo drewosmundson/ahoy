@@ -1,5 +1,5 @@
 
-import { ThreeJsScene } from './threeJsScene.js';
+import { Game } from './game.js';
 
 // DOM Elements
 const homeScreen = document.getElementById('homeScreen');
@@ -28,7 +28,7 @@ singlePlayerStartButton?.addEventListener('click', () => {
   gameCanvas.style.display = "block";
   singlePlayerMenuScreen.classList.add('hidden');
 
-  game = new ThreeJsScene(gameCanvas);
+  game = new Game(gameCanvas);
   game.start();
 });
 
