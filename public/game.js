@@ -25,6 +25,23 @@ export class Game {
 
     // Initialize simplex noise for water waves
     this.waterNoise = new SimplexNoise();
+    
+    // Boat properties
+    this.boat = null;
+    this.boatSpeed = 0.2;
+    this.boatRotationSpeed = 0.03;
+    this.boatMovement = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false
+    };
+    
+    // Initialize boat
+    this.createBoat();
+    
+    // Add event listeners for keyboard controls
+    this.initializeBoatControls();
 
     // Attach an event listener to handle resizing the window
     window.addEventListener('resize', this.handleWindowResize);
@@ -99,7 +116,6 @@ export class Game {
   }
 
   // Generate perlin noise heightmap
-  // Generate perlin noise heightmap
   generatePerlinNoise() {
     // Use SimplexNoise for terrain generation
     const simplex = new SimplexNoise();
@@ -167,6 +183,7 @@ export class Game {
       }
     }
   }
+  
   // Create terrain from heightmap
   createTerrain() {
     const size = this.mapSize;
@@ -198,6 +215,7 @@ export class Game {
     // Create terrain mesh and return it
     return new THREE.Mesh(geometry, material);
   }
+  
   // Create water with animated waves
   createWater() {
     // Create a plane geometry for the water
@@ -229,17 +247,239 @@ export class Game {
     return new THREE.Mesh(geometry, material);
   }
 
+  // Create a simple boat model
+  createBoat() {
+    // Create boat group to hold all boat parts
+    this.boat = new THREE.Group();
+    
 
+    
+    // Create boat cabin
+    const cabinGeometry = new THREE.BoxGeometry(2, 1, 2);
+    const cabinMaterial = new THREE.MeshStandardMaterial({ color: 0xA0522D }); // Slightly different brown
+    const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+    cabin.position.set(0, 1, -1); // Position on top of hull, slightly to the back
+    this.boat.add(cabin);
+    
+    // Create boat mast
+    const mastGeometry = new THREE.CylinderGeometry(0.1, 0.1, 4, 8);
+    const mastMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+    const mast = new THREE.Mesh(mastGeometry, mastMaterial);
+    mast.position.set(0, 3, 0); // Position on top of hull
+    this.boat.add(mast);
+    
+    // Create boat sail
+    const sailGeometry = new THREE.PlaneGeometry(2, 3);
+
+    const sailMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xFFFFFF, 
+      side: THREE.DoubleSide 
+    });
+    const sail = new THREE.Mesh(sailGeometry, sailMaterial);
+    sail.rotation.y = Math.PI / 2; // Orient perpendicular to boat
+    sail.position.set(0, 2, 0); // Position on mast
+    this.boat.add(sail);
+    
+    // Position boat at center of map
+    this.boat.position.set(40, 0, 40);
+    
+    // Add boat to scene
+    this.scene.add(this.boat);
+  }
+  
+  // Initialize boat controls
+  initializeBoatControls() {
+    // Add keydown event listener
+    window.addEventListener('keydown', (event) => {
+      switch(event.key) {
+        case 'w':
+        case 'ArrowUp':
+          this.boatMovement.forward = true;
+          break;
+        case 's':
+        case 'ArrowDown':
+          this.boatMovement.backward = true;
+          break;
+        case 'a':
+        case 'ArrowLeft':
+          this.boatMovement.left = true;
+          break;
+        case 'd':
+        case 'ArrowRight':
+          this.boatMovement.right = true;
+          break;
+        case 'c': // Switch camera mode
+          this.toggleCameraMode();
+          break;
+      }
+    });
+    
+    // Add keyup event listener
+    window.addEventListener('keyup', (event) => {
+      switch(event.key) {
+        case 'w':
+        case 'ArrowUp':
+          this.boatMovement.forward = false;
+          break;
+        case 's':
+        case 'ArrowDown':
+          this.boatMovement.backward = false;
+          break;
+        case 'a':
+        case 'ArrowLeft':
+          this.boatMovement.left = false;
+          break;
+        case 'd':
+        case 'ArrowRight':
+          this.boatMovement.right = false;
+          break;
+      }
+    });
+  }
+  
+  // Toggle between free camera and boat-following camera
+  toggleCameraMode() {
+    if (this.cameraMode === 'free') {
+      // Switch to boat-following mode
+      this.cameraMode = 'follow';
+      this.controls.enabled = false; // Disable orbit controls
+      
+      // Store current camera position for when we switch back
+      this.freeCameraPosition = {
+        position: this.camera.position.clone(),
+        target: this.controls.target.clone()
+      };
+      
+    } else {
+      // Switch to free camera mode
+      this.cameraMode = 'free';
+      this.controls.enabled = true; // Enable orbit controls
+      
+      // Restore previous free camera position if it exists
+      if (this.freeCameraPosition) {
+        this.camera.position.copy(this.freeCameraPosition.position);
+        this.controls.target.copy(this.freeCameraPosition.target);
+        this.controls.update();
+      }
+    }
+  }
+  
+  // Get terrain height at a specific world position
+  getTerrainHeightAt(x, z) {
+    // Convert world coordinates to heightmap indices
+    const mapSize = this.mapSize;
+    const terrainSize = 100; // Size of terrain in world units
+    
+    // Calculate normalized position in the terrain (0 to 1)
+    const normalizedX = (x + terrainSize/2) / terrainSize;
+    const normalizedZ = (z + terrainSize/2) / terrainSize;
+    
+    // Convert to heightmap indices
+    const heightmapX = Math.floor(normalizedX * (mapSize - 1));
+    const heightmapZ = Math.floor(normalizedZ * (mapSize - 1));
+    
+    // Check if position is within heightmap bounds
+    if (heightmapX >= 0 && heightmapX < mapSize && 
+        heightmapZ >= 0 && heightmapZ < mapSize) {
+      // Return height from heightmap scaled to world units
+      return this.heightmap[heightmapZ][heightmapX] * 15;
+    }
+    
+    // Return default height (water level) if outside bounds
+    return 0;
+  }
+
+  // Update boat position based on inputs
+  updateBoat() {
+    if (!this.boat) return;
+    
+    // Get current boat position and rotation
+    const boatPosition = this.boat.position;
+    const boatRotation = this.boat.rotation.y;
+    
+    // Calculate movement based on boat's rotation
+    let deltaX = 0;
+    let deltaZ = 0;
+    
+    // Forward/backward movement
+    if (this.boatMovement.forward) {
+      deltaX += Math.sin(boatRotation) * this.boatSpeed;
+      deltaZ += Math.cos(boatRotation) * this.boatSpeed;
+    }
+    if (this.boatMovement.backward) {
+      deltaX -= Math.sin(boatRotation) * this.boatSpeed * 0.5; // Slower reverse
+      deltaZ -= Math.cos(boatRotation) * this.boatSpeed * 0.5;
+    }
+    
+    // Rotation
+    if (this.boatMovement.left) {
+      this.boat.rotation.y += this.boatRotationSpeed;
+    }
+    if (this.boatMovement.right) {
+      this.boat.rotation.y -= this.boatRotationSpeed;
+    }
+    
+    // Calculate new position
+    const newX = boatPosition.x + deltaX;
+    const newZ = boatPosition.z + deltaZ;
+    
+    // Check if new position is within map bounds
+    const mapBounds = 51; // Slightly less than map size (50) to prevent going off edge
+    if (Math.abs(newX) < mapBounds && Math.abs(newZ) < mapBounds) {
+      // Get terrain height at new position
+      const terrainHeight = this.getTerrainHeightAt(newX, newZ);
+      
+      // Only move if the boat would be over water (terrain height < water level)
+      // Set collision threshold lower than water level to create buoyancy effect
+      if (terrainHeight < this.waterLevel + 0.5) { // Larger buffer to allow shallow water navigation
+        boatPosition.x = newX;
+        boatPosition.z = newZ;
+        
+        // Adjust boat height based on water waves
+        const time = performance.now();
+        const waveHeight = 0.5;
+        const waveFrequency = 0.07;
+        const noiseValue = this.waterNoise.noise(
+          newX * waveFrequency + time * 0.00015,
+          newZ * waveFrequency + time * 0.00012
+        );
+        
+        // Set boat Y position to follow waves - slightly lower to show buoyancy
+        this.boat.position.y = this.waterLevel - 0.8 + noiseValue * waveHeight;
+        
+        // Apply slight tilt based on waves
+        this.boat.rotation.x = noiseValue * 0.1;
+        this.boat.rotation.z = noiseValue * 0.1;
+      }
+    }
+    
+    // Update camera if in follow mode
+    if (this.cameraMode === 'follow' && this.boat) {
+      // Calculate camera position behind the boat
+      const cameraDistance = 10;
+      const cameraHeight = 5;
+      const cameraX = boatPosition.x - Math.sin(boatRotation) * cameraDistance;
+      const cameraZ = boatPosition.z - Math.cos(boatRotation) * cameraDistance;
+      
+      // Set camera position and look at boat
+      this.camera.position.set(cameraX, this.waterLevel + cameraHeight, cameraZ);
+      this.camera.lookAt(boatPosition);
+    }
+  }
 
   /**
    * Animation loop method to be called every frame
    * @param {number} time - Current time in milliseconds (automatically passed by requestAnimationFrame)
    */
   animate = (time) => {
-    // If controls (like OrbitControls) are defined, update them each frame
-    if (this.controls) {
+    // If controls (like OrbitControls) are defined and enabled, update them each frame
+    if (this.controls && this.controls.enabled) {
       this.controls.update();
     }
+    
+    // Update boat position and rotation
+    this.updateBoat();
+    
     // Update water waves animation
     if (this.water && this.waterVertices) {
       this.updateWaterWaves(time);
@@ -251,22 +491,20 @@ export class Game {
 
   // Starts the animation loop using the renderer's built-in function
   start() {
+    // Set initial camera mode
+    this.cameraMode = 'free';
     this.renderer.setAnimationLoop(this.animate); // starts calling `animate()` repeatedly
   }
 
-
-
-
-  
   // Update water waves animation
   updateWaterWaves(time) {
     const positions = this.water.geometry.attributes.position.array;
     const waterSize = this.waterMapSize;
     
     // Animation speed and wave parameters
-    const timeScale = 0.0005;
+    const timeScale = 0.00015;
     const waveHeight = 0.5;
-    const waveFrequency = 0.05;
+    const waveFrequency = 0.07;
     
     // Animate each vertex
     for (let i = 0, j = 0; i < positions.length; i += 3, j++) {
@@ -288,16 +526,10 @@ export class Game {
     this.water.geometry.computeVertexNormals();
   }
 
-
-
   // Stops the animation loop by passing null
   stop() {
     this.renderer.setAnimationLoop(null); // stops rendering
   }
-
-
-
-
 
   // Handles resizing the window and maintaining a 16:9 aspect ratio
   handleWindowResize = () => {
@@ -326,5 +558,4 @@ export class Game {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   };
-
 }
