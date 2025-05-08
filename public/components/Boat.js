@@ -23,7 +23,7 @@ export class Boat {
   createBoatModel() {
     // Create boat group to hold all parts
     const boat = new THREE.Group();
-    
+    boat.position.set()
     // Create boat hull (base)
     const hullGeometry = new THREE.BoxGeometry(3, 1, 6);
     const hullMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
@@ -52,10 +52,11 @@ export class Boat {
       side: THREE.DoubleSide
     });
     const sail = new THREE.Mesh(sailGeometry, sailMaterial);
-    sail.rotation.y = Math.PI / 2; // Orient perpendicular to boat
+    sail.rotation.y = Math.PI / 1; // Orient perpendicular to boat
     sail.position.set(0, 2, 0); // Position on mast
     boat.add(sail);
-
+    // Create boat hitbox
+    
 
 
     return boat;
@@ -93,9 +94,9 @@ export class Boat {
     // Calculate new position
     const newX = position.x + deltaX;
     const newZ = position.z + deltaZ;
-    
+
     // Check if new position is within map bounds
-    const mapBounds = 50; // Slightly less than map size
+    const mapBounds = 450; // Slightly less than map size
     if (Math.abs(newX) < mapBounds && Math.abs(newZ) < mapBounds) {
       // Get terrain height at new position
       const terrainHeight = terrain.getHeightAt(newX, newZ);
@@ -119,6 +120,9 @@ export class Boat {
         this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
         this.model.rotation.x = noiseValue * 0.1;
         this.model.rotation.z = noiseValue * 0.1;
+
+
+
       }
     }
   }

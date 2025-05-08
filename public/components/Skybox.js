@@ -71,7 +71,6 @@ export class Skybox {
       
       // Create skybox geometry
       const geometry = new THREE.BoxGeometry(1000, 1000, 1000);
-      
       // Create mesh and add to scene
       this.mesh = new THREE.Mesh(geometry, materials);
       this.scene.add(this.mesh);

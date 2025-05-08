@@ -3,7 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { SimplexNoise } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/math/SimplexNoise.js';
 
 export class Water {
-  constructor(scene, waterLevel = 5) {
+  constructor(scene, waterLevel = 8) {
     this.scene = scene;
     this.waterLevel = waterLevel;
     this.waterSize = 64; // Resolution of water mesh
@@ -19,8 +19,8 @@ export class Water {
   createWaterMesh() {
     // Create water plane geometry
     const geometry = new THREE.PlaneGeometry(
-      100, // Same size as terrain
-      100,
+      500, // Same size as terrain
+      500,
       this.waterSize - 1,
       this.waterSize - 1
     );
@@ -51,9 +51,9 @@ export class Water {
     const positions = this.mesh.geometry.attributes.position.array;
     
     // Animation parameters
-    const timeScale = 0.00015;
-    const waveHeight = 0.5;
-    const waveFrequency = 0.07;
+    const timeScale = 0.0002;
+    const waveHeight = 0.8;
+    const waveFrequency = 0.08;
     
     // Update each vertex position for wave effect
     for (let i = 0; i < positions.length; i += 3) {

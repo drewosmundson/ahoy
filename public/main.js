@@ -23,6 +23,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let game;
 
+  // instant start
+  const instantStart = true;
+  if(instantStart){
+    homeScreen.style.display = "none";
+    gameCanvas.style.display = "block";
+    singlePlayerMenuScreen.classList.add('hidden');
+    game = new Game(gameCanvas);
+    game.start();
+  }
   /////////////////////////////////////////////////////
   // Single Player Menu Events
   /////////////////////////////////////////////////////

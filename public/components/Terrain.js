@@ -5,9 +5,10 @@ import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 export class Terrain {
   constructor(scene) {
     this.scene = scene;
-    this.mapSize = 256;
+    this.mapSize = 512;
     this.lowPoly = false;
-    this.terrainSize = 100; // Size in world units
+    this.terrainSize = 512; // Size in world units
+    this.heightMultiply = 90;
     
     // Generate terrain data
     this.generateTerrain();
@@ -20,18 +21,36 @@ export class Terrain {
   generateTerrain() {
     // Create noise generator
     const noise = new NoiseGenerator();
-    
+
     // Generate height map with falloff for island effect
     this.heightmap = noise.generateHeightmap(this.mapSize, {
-      scale: 0.02,
+      scale: 0.015,
       octaves: 4,
       persistence: 0.5,
       lacunarity: 2,
       falloff: true,
-      falloffStrength: 3,
-      falloffScale: 0.8
+      falloffStrength: 4,
+      falloffScale: 0.9
     });
+
+
+
+    const overlay = new NoiseGenerator();
+
+
+    this.heightMapOverlay = overlay.generateHeightmap(this.mapSize, {
+      scale: 0.01,
+      octaves: 2,
+      persistence: 0.5,
+      lacunarity: 2,
+      falloff: false ,
+      falloffStrength: 4,
+      falloffScale: 0.9
+    });
+
+
   }
+
   
   createTerrainMesh() {
     const size = this.mapSize;
@@ -52,7 +71,7 @@ export class Terrain {
         if (x < size && y < size) {
           // Add random variation for jagged look
           const randomHeight = Math.random() * 0.8;
-          vertices[i + 1] = this.heightmap[y < size ? y : size-1][x < size ? x : size-1] * 20 + randomHeight;
+          vertices[i + 1] = this.heightmap[y < size ? y : size-1][x < size ? x : size-1] * this.heightMapOverlay[y][x] * this.heightMultiply + randomHeight;
         }
       }
     } else {
@@ -67,7 +86,8 @@ export class Terrain {
         const y = Math.floor(j / size);
         
         if (x < size && y < size) {
-          vertices[i + 1] = this.heightmap[y][x] * 20;
+          vertices[i + 1] = this.heightmap[y][x] * this.heightMapOverlay[y][x] * this.heightMultiply;
+          ;
         }
       }
     }
