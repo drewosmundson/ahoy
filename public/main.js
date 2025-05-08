@@ -40,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     game = new Game(gameCanvas);
     game.start();
-    window.addEventListener('resize', game.handleWindowResize);
 
     window.game = game; // for debugging
   });
