@@ -23,7 +23,6 @@ export class Game {
     
     // Create game components
     this.terrain = new Terrain(this.scene);
-    
     this.water = new Water(this.scene, this.waterLevel);
     this.boat = new Boat(this.scene, this.waterLevel);
     this.skybox = new Skybox(this.scene);

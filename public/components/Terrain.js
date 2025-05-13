@@ -34,10 +34,7 @@ export class Terrain {
     });
 
 
-
     const overlay = new NoiseGenerator();
-
-
     this.heightMapOverlay = overlay.generateHeightmap(this.mapSize, {
       scale: 0.01,
       octaves: 2,
@@ -47,6 +44,8 @@ export class Terrain {
       falloffStrength: 4,
       falloffScale: 0.9
     });
+
+
 
 
   }
@@ -87,7 +86,6 @@ export class Terrain {
         
         if (x < size && y < size) {
           vertices[i + 1] = this.heightmap[y][x] * this.heightMapOverlay[y][x] * this.heightMultiply;
-          ;
         }
       }
     }
@@ -125,21 +123,26 @@ export class Terrain {
   // Get height at specific world coordinates
   getHeightAt(x, z) {
     // Convert world coordinates to heightmap indices
-    const normalizedX = (x + this.terrainSize/2) / this.terrainSize;
-    const normalizedZ = (z + this.terrainSize/2) / this.terrainSize;
-    
+    const normalizedX = (x + this.terrainSize / 2) / this.terrainSize;
+    const normalizedZ = (z + this.terrainSize / 2) / this.terrainSize;
+
     // Convert to heightmap indices
     const heightmapX = Math.floor(normalizedX * (this.mapSize - 1));
     const heightmapZ = Math.floor(normalizedZ * (this.mapSize - 1));
-    
+
     // Check if position is within heightmap bounds
-    if (heightmapX >= 0 && heightmapX < this.mapSize && 
-        heightmapZ >= 0 && heightmapZ < this.mapSize) {
-      // Return height from heightmap scaled to world units
-      return this.heightmap[heightmapZ][heightmapX] * 15;
+    if (
+      heightmapX >= 0 && heightmapX < this.mapSize &&
+      heightmapZ >= 0 && heightmapZ < this.mapSize
+    ) {
+      // Combine heightmap, overlay, and height multiplier
+      const height = this.heightmap[heightmapZ][heightmapX];
+      const overlay = this.heightMapOverlay[heightmapZ][heightmapX];
+      return height * overlay * this.heightMultiply;
     }
-    
+
     // Return default height if outside bounds
     return 0;
   }
+
 }

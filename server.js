@@ -10,10 +10,28 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+
+
+
+
+io.on("connection", (socket) => {
+  console.log(`Player connected: ${socket.id}`);
+  
+  // Create a new lobby
+  socket.on("debug", (data) => {
+    console.log(`debug from ${socket.id}:`, data);
+    
+  })
+})
+
+
+
+
 
 
 server.listen(PORT, () => {
