@@ -2,10 +2,10 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 
 export class Boat {
-  constructor(scene, waterLevel) {
-    this.scene = scene;
+  constructor(scene, waterLevel, socket) {
+    this.scene = scene; 
     this.waterLevel = waterLevel;
-    
+    this.socket = socket;
     // Movement properties
     this.speed = 0.2;
     this.rotationSpeed = 0.03;
@@ -63,7 +63,16 @@ export class Boat {
 
     return boat;
   }
-
+  
+  setPositionAndRotation(x, y, z, rotation) {
+    if (!this.model) return;
+    
+    // Set position
+    this.model.position.set(x, y, z);
+    
+    // Set rotation
+    this.model.rotation.y = rotation;
+  }
   
 
   update(time, movement, terrain) {
@@ -104,11 +113,6 @@ export class Boat {
     if (Math.abs(newX) < mapBounds && Math.abs(newZ) < mapBounds) {
       // Get terrain height at new position
       const terrainHeight = terrain.getHeightAt(newX, newZ);
-      
-      const a = terrain.getHeightAt(newX, newZ);
-      const b = terrain.getHeightAt(newX, newZ);
-      const c = terrain.getHeightAt(newX, newZ);
-      const d = terrain.getHeightAt(newX, newZ);
 
       // Only move if boat would be over water
       if (terrainHeight < this.waterLevel) {
@@ -129,8 +133,7 @@ export class Boat {
         this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
         this.model.rotation.x = noiseValue * 0.1;
         this.model.rotation.z = noiseValue * 0.1;
-        
-        
+        this.socket.emit('debug');
       }
     }
   }

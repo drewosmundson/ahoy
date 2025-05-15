@@ -1,6 +1,5 @@
 
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 import { Game } from './Game.js';
 
 
@@ -18,7 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const gameCanvas = document.getElementById('gameCanvas');
 
   let socket = null;
-  socket = io();
+  try {
+    socket = io();
+  }
+  catch (error) {
+    console.error('Error initializing socket:', error);
+  }
   let game;
 
   // instant start for debugging
@@ -27,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     homeScreen.style.display = "none";
     gameCanvas.style.display = "block";
     singlePlayerMenuScreen.classList.add('hidden');
-    game = new Game(gameCanvas);
+    game = new Game(gameCanvas, socket);
     game.start();
   }
 
@@ -43,9 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     homeScreen.style.display = "none";
     gameCanvas.style.display = "block";
     singlePlayerMenuScreen.classList.add('hidden');
-    game = new Game(gameCanvas);
+    game = new Game(gameCanvas, socket);
     game.start();
-
     window.game = game; // for debugging
     });
   });

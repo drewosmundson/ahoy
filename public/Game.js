@@ -8,14 +8,15 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 
 export class Game {
-  constructor(canvas) {
+  constructor(canvas, socket) { 
+
     // Core properties
     this.canvas = canvas;
     this.scene = new THREE.Scene();
     this.cameraMode = 'free';
     this.waterLevel = 10;
     this.difficulty = 1;
-
+    this.socket = socket;
     // Initialize core systems
     this.initRenderer();
     this.initCamera();
@@ -25,7 +26,7 @@ export class Game {
     // Create game components
     this.terrain = new Terrain(this.scene);
     this.water = new Water(this.scene, this.waterLevel);
-    this.boat = new Boat(this.scene, this.waterLevel);
+    this.boat = new Boat(this.scene, this.waterLevel, this.socket);
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
     
@@ -34,6 +35,10 @@ export class Game {
 
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
+
+    // emit to server that the game has started
+
+ 
   }
   
   initRenderer() {
@@ -73,15 +78,38 @@ export class Game {
   
   // add enemy boats
   addEnemies() {
-
+    let enemyBoats = [];
     for (let i = 0; i < this.difficulty * 10; i++) {
       const enemyBoat = new Boat(this.scene, this.waterLevel);
       enemyBoat.model.position.set(Math.random() * 50 - 25, this.waterLevel, Math.random() * -20);
       enemyBoat.model.rotation.y = Math.random() * Math.PI * 2;
       this.scene.add(enemyBoat.model);
+      enemyBoats.push(enemyBoat);
     }
-
+    return enemyBoats;
   }
+  handleMultiPlayerJoin() {
+    // Handle player joining
+    this.socket.on('playerJoin', (data) => {
+      const enemyBoat = new Boat(this.scene, this.waterLevel);
+      enemyBoat.model.position.set(data.position.x, this.waterLevel, data.position.z);
+      enemyBoat.model.rotation.y = data.rotation;
+      this.scene.add(enemyBoat.model);
+      this.enemyBoats[data.id] = enemyBoat;
+    });
+  }
+
+  handleMultiplayerInput() {
+    // Handle input from other players
+    this.socket.on('enemyBoatMovement', (data) => {
+      const boat = this.enemyBoats[data.id];
+      if (boat) {
+        boat.setPositionAndRotation(data.position.x, this.waterLevel, data.position.z, data.rotation);
+      }
+    });
+  }
+
+
 
 
   toggleFog() {
@@ -163,7 +191,7 @@ export class Game {
     // Update game components
     if (this.water) this.water.update(time);
     if (this.boat) this.boat.update(time, this.input.boatMovement, this.terrain);
-    
+  
     // Update camera if in follow mode
     this.updateCamera();
     

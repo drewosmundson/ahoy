@@ -25,7 +25,12 @@ io.on("connection", (socket) => {
   // Create a new lobby
   socket.on("debug", (data) => {
     console.log(`debug from ${socket.id}:`, data);
-    
+  })
+
+  socket.on("newBoatPosition", (data) => {
+    console.log(`Boat position from ${socket.id}:`, data);
+    // broadcast the new boat position to all other clients
+    socket.broadcast.emit("enemyBoatMovement", data);
   })
 })
 
