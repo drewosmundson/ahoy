@@ -31,6 +31,61 @@
         <button id="singlePlayerStartButton">Start Game</button>
       </div>
 
+      <div id="createLobbyScreen" class="section hidden">
+        <div id="createLobbyForm">
+          <label for="lobbyName">Lobby Name:</label>
+          <input type="text" id="lobbyName" name="lobbyName" required />
+          <button id="createLobbyButton">Create Lobby</button>
+        </div>
+      </div>
+
+      <div id="lobbyScreen" class="section hidden">
+        <div id="lobbyInfo">
+          <h2>Lobby Name: <span id="lobbyNameDisplay"></span></h2>
+          <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
+        </div>
+        <div id="playerList">
+          <h3>Players:</h3>
+          <ul id="playerListItems"></ul>
+        </div>
+        <button id="startGameButton">Start Game</button>
+        <button id="leaveLobbyButton">Leave Lobby</button>
+        <!-- lobby chat -->
+        <div id="lobbyChat">
+          <h3>Lobby Chat:</h3>
+          <ul id="chatMessages"></ul>
+          <input type="text" id="chatInput" placeholder="Type a message..." />
+          <button id="sendChatButton">Send</button>
+        </div>
+        <!-- lobby settings -->
+        <div id="lobbySettings">
+          <h3>Lobby Settings:</h3>
+          <label for="gameMode">Game Mode:</label>
+          <select id="gameMode">
+            <option value="noBots">No AI Bots</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <label for="TerrainType">Terrain Type:</label>
+          <select id="TerrainType">
+            <option value="default">Default</option>
+            <option value="noIslands">No Islands</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="joinLobbyScreen" class="section hidden">
+        <div id="joinLobbyForm">
+          <label for="lobbyCode">Lobby Code:</label>
+          <input type="text" id="lobbyCode" name="lobbyCode" required />
+          <button id="joinLobbyButton">Join Lobby</button>
+        </div>
+      </div>
+
+      <div id="waitingForHostToStart" class="section hidden">
+      </div>
+
     </div>
   </div>
   <div id="gameContainer">

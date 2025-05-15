@@ -26,14 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let game;
 
   // instant start for debugging
-  const instantStart = true;
-  if(instantStart){
-    homeScreen.style.display = "none";
-    gameCanvas.style.display = "block";
-    singlePlayerMenuScreen.classList.add('hidden');
-    game = new Game(gameCanvas, socket);
-    game.start();
-  }
+//   const instantStart = true;
+//   if(instantStart){
+//     homeScreen.style.display = "none";
+//     gameCanvas.style.display = "block";
+//     singlePlayerMenuScreen.classList.add('hidden');
+//     game = new Game(gameCanvas, socket);
+//     game.start();
+//   }
 
   /////////////////////////////////////////////////////
   // Single Player Menu Events
@@ -51,68 +51,47 @@ document.addEventListener('DOMContentLoaded', () => {
     game.start();
     window.game = game; // for debugging
     });
-  });
   /////////////////////////////////////////////////////
   // Multiplayer Menu Events
   /////////////////////////////////////////////////////
 
 
-  
-
-
-
-
-
-    /////////////////////////////////////////////////////
+    ////////////////////////////////////////////////
     // Create Lobby Menu Events
     /////////////////////////////////////////////////////
     // client -> server
+    createLobbyMenuButton?.addEventListener('click', () => {
+        mainMenuScreen.classList.add('hidden');
+        createLobbyMenuScreen.classList.remove('hidden');
+        socket.emit('createLobbyRequest');
+    });
     createLobby?.addEventListener('click', () => {
 
     });
 
-    createLobbyButton?.addEventListener('click', () => {
-        socket.emit('create-lobby');
-    });
 
-    // server -> client
-    socket.on('lobby-created', ({ lobbyId }) => {
-        friendsMenuScreen.classList.add('hidden');
-        lobbyMenuScreen.classList.remove('hidden');
-        lobbyDisplayNumber.textContent = lobbyId;
-    });
-
-    socket.on('lobby-joined', ({ lobbyId }) => {
-        friendsMenuScreen.classList.add('hidden');
-        lobbyMenuScreen.classList.remove('hidden');
-        lobbyDisplayNumber.textContent = lobbyId;
-    });
-
-    /////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////
     // Join Lobby Menu Events
     /////////////////////////////////////////////////////
         // client -> server
 
+
+
+    joinLobbyMenuButton?.addEventListener('click', () => {
+        mainMenuScreen.classList.add('hidden');
+        joinLobbyMenuScreen.classList.remove('hidden');
+    });
+
     joinLobby?.addEventListener('click', () => {
-
-    });
-
-    joinLobbyButton?.addEventListener('click', () => {
         const lobbyId = lobbyInputNumber.value.trim().toUpperCase();
-        if (lobbyId) {
-        socket.emit('join-lobby', { lobbyId, playerNum: 2 });
-        }
-    });
-
-        // server -> client
-    socket.on('join-error', ({ message }) => {
-        errorMessage.textContent = message;
-    });
+            if (lobbyId) {
+            socket.emit('joinLobbyRequest', { lobbyId, socketId: socket.id });
+            }
+        });
 
 
     ///////////////////////////////////////////
     // game events
     //////////////////////////////////////////
-
-
+});
 
