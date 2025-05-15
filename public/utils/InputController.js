@@ -56,6 +56,10 @@ export class InputController {
         case 'p':
           this.game.toggleTerrainMode();
           break;
+
+        case 'f':
+          this.game.toggleFog();
+          break;
           
         // Add more controls as needed
       }

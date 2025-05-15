@@ -63,6 +63,7 @@ export class Boat {
 
     return boat;
   }
+
   
 
   update(time, movement, terrain) {
@@ -104,7 +105,6 @@ export class Boat {
       // Get terrain height at new position
       const terrainHeight = terrain.getHeightAt(newX, newZ);
       
-
       const a = terrain.getHeightAt(newX, newZ);
       const b = terrain.getHeightAt(newX, newZ);
       const c = terrain.getHeightAt(newX, newZ);
@@ -129,6 +129,8 @@ export class Boat {
         this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
         this.model.rotation.x = noiseValue * 0.1;
         this.model.rotation.z = noiseValue * 0.1;
+        
+        
       }
     }
   }

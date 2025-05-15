@@ -14,7 +14,8 @@ export class Game {
     this.scene = new THREE.Scene();
     this.cameraMode = 'free';
     this.waterLevel = 10;
-    
+    this.difficulty = 1;
+
     // Initialize core systems
     this.initRenderer();
     this.initCamera();
@@ -28,8 +29,8 @@ export class Game {
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
     
-    // Add helpers
-    this.addHelpers();
+    // add features
+    this.addEnemies();
 
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
@@ -70,9 +71,27 @@ export class Game {
     this.controls.update();
   }
   
-  addHelpers() {
-    const gridHelper = new THREE.GridHelper(200, 10);
-    this.scene.add(gridHelper);
+  // add enemy boats
+  addEnemies() {
+
+    for (let i = 0; i < this.difficulty * 10; i++) {
+      const enemyBoat = new Boat(this.scene, this.waterLevel);
+      enemyBoat.model.position.set(Math.random() * 50 - 25, this.waterLevel, Math.random() * -20);
+      enemyBoat.model.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(enemyBoat.model);
+    }
+
+  }
+
+
+  toggleFog() {
+    if (this.scene.fog) {
+      this.scene.fog = null;
+    } else {
+      const color = 0xF7F4E9; // white
+      const density = 0.008;
+      this.scene.fog = new THREE.FogExp2(color, density);
+    }
   }
   
   toggleCameraMode() {

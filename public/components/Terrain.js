@@ -45,9 +45,6 @@ export class Terrain {
       falloffScale: 0.9
     });
 
-
-
-
   }
 
   
@@ -56,6 +53,8 @@ export class Terrain {
     let geometry;
     
     if (this.lowPoly) {
+      // const noise = new NoiseGenerator();
+      // this.heightMapOverlay = noise.addTerrainFeatures(this.heightMapOverlay);
       // Create low-poly terrain with fewer segments
       const segmentCount = Math.floor(size / 8);
       geometry = new THREE.PlaneGeometry(this.terrainSize, this.terrainSize, segmentCount, segmentCount);
@@ -75,6 +74,11 @@ export class Terrain {
       }
     } else {
       // Create regular terrain with more detail
+      // create more randowm mountains and valleys
+      // const noise = new NoiseGenerator();
+      // this.heightMap = noise.addTerrainFeatures(this.heightmap); 
+
+
       geometry = new THREE.PlaneGeometry(this.terrainSize, this.terrainSize, size - 1, size - 1);
       geometry.rotateX(-Math.PI / 2);
       
@@ -103,6 +107,7 @@ export class Terrain {
     // Create and return mesh
     return new THREE.Mesh(geometry, material);
   }
+
   
   // Toggle between low-poly and regular terrain
   toggleTerrainMode() {

@@ -3,6 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 
 export class Skybox {
   constructor(scene) {
+
     this.scene = scene;
     this.mesh = null;
     
@@ -18,8 +19,41 @@ export class Skybox {
     
     // Load skybox textures
     this.loadSkybox();
+    this.loadClouds();
+    this.loadFog();
+  }
+
+  loadFog() {
+    const color = 0xF7F4E9; // white
+    const density = 0.008;
+    this.scene.fog = new THREE.FogExp2(color, density);
   }
   
+  loadClouds() {
+    const loader = new THREE.TextureLoader();
+    loader.load('https://threejs.org/examples/textures/cloud10.png', (texture) => {
+      const cloudGeometry = new THREE.PlaneGeometry(10, 10);
+      const cloudMaterial = new THREE.MeshLambertMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false,
+      });
+
+      for (let i = 0; i < 10; i++) {
+        const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial.clone());
+        cloud.position.set(
+          Math.random() * 50 - 25,
+          Math.random() * 20 - 10,
+          Math.random() * -20
+        );
+        cloud.rotation.z = Math.random() * 2 * Math.PI;
+        this.scene.add(cloud);
+      }
+    });
+  }
+
+
   loadSkybox() {
     // Create texture loader
     const loader = new THREE.TextureLoader();
