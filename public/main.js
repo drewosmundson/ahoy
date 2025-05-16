@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Error initializing socket:', error);
   }
   let game;
+  let host = true;
 
   // instant start for debugging
 //   const instantStart = true;
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     homeScreen.style.display = "none";
     gameCanvas.style.display = "block";
     singlePlayerMenuScreen.classList.add('hidden');
-    game = new Game(gameCanvas, socket);
+    game = new Game(gameCanvas, socket, host);
     game.start();
     window.game = game; // for debugging
     });
@@ -69,13 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
-
+    // server -> client
     ////////////////////////////////////////////////////
     // Join Lobby Menu Events
     /////////////////////////////////////////////////////
         // client -> server
-
-
 
     joinLobbyMenuButton?.addEventListener('click', () => {
         mainMenuScreen.classList.add('hidden');
@@ -87,9 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lobbyId) {
             socket.emit('joinLobbyRequest', { lobbyId, socketId: socket.id });
             }
-        });
-
-
+        }); 
+        // server -> client
+    socket.on('lobbyJoined', () => {
+        host = false;
+    })
     ///////////////////////////////////////////
     // game events
     //////////////////////////////////////////

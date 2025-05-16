@@ -39,7 +39,17 @@
         </div>
       </div>
 
-      <div id="lobbyScreen" class="section hidden">
+      <div id="joinLobbyScreen" class="section hidden">
+        <div id="joinLobbyForm">
+          <label for="lobbyCode">Lobby Code:</label>
+          <input type="text" id="lobbyCode" name="lobbyCode" required />
+          <button id="joinLobbyButton">Join Lobby</button>
+        </div>
+      </div>
+
+
+
+      <div id="hostLobbyScreen" class="section hidden">
         <div id="lobbyInfo">
           <h2>Lobby Name: <span id="lobbyNameDisplay"></span></h2>
           <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
@@ -75,15 +85,28 @@
         </div>
       </div>
 
-      <div id="joinLobbyScreen" class="section hidden">
-        <div id="joinLobbyForm">
-          <label for="lobbyCode">Lobby Code:</label>
-          <input type="text" id="lobbyCode" name="lobbyCode" required />
-          <button id="joinLobbyButton">Join Lobby</button>
-        </div>
-      </div>
 
-      <div id="waitingForHostToStart" class="section hidden">
+      <div id="participantLobbyScreen" class="section hidden">
+        <div id="lobbyInfo">
+          <h2>Lobby Name: <span id="lobbyNameDisplay"></span></h2>
+          <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
+        </div>
+        <div id="playerList">
+          <h3>Players:</h3>
+          <ul id="playerListItems"></ul>
+        </div>
+        <button id="leaveLobbyButton">Leave Lobby</button>
+
+        <div id="lobbyChat">
+          <h3>Lobby Chat:</h3>
+          <ul id="chatMessages"></ul>
+          <input type="text" id="chatInput" placeholder="Type a message..." />
+          <button id="sendChatButton">Send</button>
+        </div>
+
+        <div id="watingForHost">
+          <h3>Waiting for host to start the game...</h3>
+        </div>
       </div>
 
     </div>

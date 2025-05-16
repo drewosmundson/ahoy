@@ -21,12 +21,21 @@ let lobbies = {};
 
 io.on("connection", (socket) => {
 
+  //////////////////////////////////////
+  // Utils
+  /////////////////////////////////////
+
   console.log(`Player connected: ${socket.id}`);
-  
   // Create a new lobby
   socket.on("debug", (data) => {
     console.log(`debug from ${socket.id}:`, data);
   })
+
+
+  ///////////////////////////
+  // Lobby Menus
+  ////////////////////////////
+
 
   socket.on("create-lobby", (data) => {
     console.log(`Lobby created by ${socket.id}:`, data);
@@ -57,6 +66,11 @@ io.on("connection", (socket) => {
       socket.to(lobbyId).emit("game-started");
     }
   });
+
+
+  ////////////////////////////////////
+  // Game interactions
+  ///////////////////////////////////
 
 
   socket.on("newBoatPosition", (data) => {

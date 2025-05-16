@@ -8,7 +8,7 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 
 export class Game {
-  constructor(canvas, socket) { 
+  constructor(canvas, socket, host = true) { 
 
     // Core properties
     this.canvas = canvas;
@@ -17,6 +17,7 @@ export class Game {
     this.waterLevel = 10;
     this.difficulty = 1;
     this.socket = socket;
+    this.host = host;
     // Initialize core systems
     this.initRenderer();
     this.initCamera();
@@ -30,15 +31,15 @@ export class Game {
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
     
-    // add features
-    this.addEnemies();
 
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
 
     // emit to server that the game has started
 
- 
+    if (this.host) {
+      this.addEnemies();
+    }
   }
   
   initRenderer() {
