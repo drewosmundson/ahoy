@@ -3,12 +3,13 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 
 export class Terrain {
-  constructor(scene) {
+  constructor(scene, seed) {
     this.scene = scene;
     this.mapSize = 512;
     this.lowPoly = false;
     this.terrainSize = 512; // Size in world units
     this.heightMultiply = 90;
+    this.seed = seed;
     
     // Generate terrain data
     this.generateTerrain();
@@ -20,7 +21,7 @@ export class Terrain {
   
   generateTerrain() {
     // Create noise generator
-    const noise = new NoiseGenerator();
+    const noise = new NoiseGenerator(this.seed);
 
     // Generate height map with falloff for island effect
     this.heightmap = noise.generateHeightmap(this.mapSize, {

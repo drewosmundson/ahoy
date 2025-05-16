@@ -133,7 +133,6 @@ export class Boat {
         this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
         this.model.rotation.x = noiseValue * 0.1;
         this.model.rotation.z = noiseValue * 0.1;
-        this.socket.emit('debug');
       }
     }
   }

@@ -2,7 +2,8 @@
 import { SimplexNoise } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/math/SimplexNoise.js';
 
 export class NoiseGenerator {
-  constructor() {
+  constructor(seed) {
+    this.seed = seed;
     this.simplex = new SimplexNoise();
   }
   

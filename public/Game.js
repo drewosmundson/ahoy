@@ -8,7 +8,7 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 
 export class Game {
-  constructor(canvas, socket, host = true) { 
+  constructor(canvas, socket, seed, host = true) { 
 
     // Core properties
     this.canvas = canvas;
@@ -18,14 +18,16 @@ export class Game {
     this.difficulty = 1;
     this.socket = socket;
     this.host = host;
+    this.seed = seed;
     // Initialize core systems
     this.initRenderer();
     this.initCamera();
+    this.initAudio();
     this.initLighting();
     this.initControls();
     
     // Create game components
-    this.terrain = new Terrain(this.scene);
+    this.terrain = new Terrain(this.scene, this.seed);
     this.water = new Water(this.scene, this.waterLevel);
     this.boat = new Boat(this.scene, this.waterLevel, this.socket);
     this.skybox = new Skybox(this.scene);
@@ -56,7 +58,37 @@ export class Game {
     this.camera.position.set(0, 30, 50);
     this.camera.lookAt(0, 0, 0);
   }
-  
+initAudio() {
+  this.audioListener = new THREE.AudioListener();
+  this.camera.add(this.audioListener);
+  this.audio = new THREE.Audio(this.audioListener);
+  this.audioLoaded = false;
+
+  // Load audio file
+  const audioLoader = new THREE.AudioLoader();
+  audioLoader.load('resources/sounds/Lost_Sheep.m4a', (buffer) => {
+    this.audio.setBuffer(buffer);
+    this.audio.setLoop(true);
+    this.audio.setVolume(0.5);
+    this.audioLoaded = true;
+    console.log('Audio loaded successfully');
+    
+    // If we've already been asked to play, do it now
+    if (this.shouldPlayAudio) {
+      this.playAudio();
+    }
+  });
+}
+// Add a new method to play audio safely
+playAudio() {
+  if (this.audioLoaded) {
+    console.log('Playing audio');
+    this.audio.play();
+  } else {
+    console.log('Audio not loaded yet, will play when ready');
+    this.shouldPlayAudio = true; 
+  }
+}
   initLighting() {
     // Main directional light (sun)
     const directionalLight = new THREE.DirectionalLight(0xFFF5EE, 1);
@@ -109,8 +141,6 @@ export class Game {
       }
     });
   }
-
-
 
 
   toggleFog() {
