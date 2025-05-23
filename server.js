@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -26,7 +26,6 @@ io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
   
   let currentLobby = null; // Track which lobby this socket is in
-  
   //////////////////////////////////////
   // Debug Utils
   /////////////////////////////////////

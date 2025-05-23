@@ -6,6 +6,7 @@ import { Water } from './components/Water.js';
 import { Boat } from './components/Boat.js';
 import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
+import { SoundManager } from './utils/SoundManager.js';
 
 export class Game {
   constructor(canvas, socket, seed, host = true) { 
@@ -19,10 +20,11 @@ export class Game {
     this.socket = socket;
     this.host = host;
     this.seed = seed;
+
     // Initialize core systems
     this.initRenderer();
     this.initCamera();
-    this.initAudio();
+    this.initSound();
     this.initLighting();
     this.initControls();
     
@@ -32,8 +34,8 @@ export class Game {
     this.boat = new Boat(this.scene, this.waterLevel, this.socket);
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
-    
 
+    
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
 
@@ -58,37 +60,16 @@ export class Game {
     this.camera.position.set(0, 30, 50);
     this.camera.lookAt(0, 0, 0);
   }
-initAudio() {
-  this.audioListener = new THREE.AudioListener();
-  this.camera.add(this.audioListener);
-  this.audio = new THREE.Audio(this.audioListener);
-  this.audioLoaded = false;
 
-  // Load audio file
-  const audioLoader = new THREE.AudioLoader();
-  audioLoader.load('resources/sounds/Lost_Sheep.m4a', (buffer) => {
-    this.audio.setBuffer(buffer);
-    this.audio.setLoop(true);
-    this.audio.setVolume(0.5);
-    this.audioLoaded = true;
-    console.log('Audio loaded successfully');
-    
-    // If we've already been asked to play, do it now
-    if (this.shouldPlayAudio) {
-      this.playAudio();
-    }
-  });
+
+  // replace with soundManager class
+  initSound() {
+    this.soundManager = new SoundManager(this.camera);
+    this.soundManager.loadSoundEffect('mainTheme', 'resources/sounds/Lost_Sheep_Compressed.mp3');
+    this.soundManager.loadSoundEffect('ambient', 'resources/sounds/waves.mp3');
+    this.playBackgroundMusic()
 }
-// Add a new method to play audio safely
-playAudio() {
-  if (this.audioLoaded) {
-    console.log('Playing audio');
-    this.audio.play();
-  } else {
-    console.log('Audio not loaded yet, will play when ready');
-    this.shouldPlayAudio = true; 
-  }
-}
+
   initLighting() {
     // Main directional light (sun)
     const directionalLight = new THREE.DirectionalLight(0xFFF5EE, 1);
@@ -178,6 +159,21 @@ playAudio() {
   toggleTerrainMode() {
     return this.terrain.toggleTerrainMode();
   }
+
+  playBackgroundMusic() {
+    if (this.soundManager) {
+        this.soundManager.playSound('mainTheme' , 0.05);
+        this.soundManager.playSound('ambient',0.07);
+    }
+  }
+    // Play a sound effect
+  playSoundEffect(name, volumeScale = 1.0) {
+    if (this.soundManager) {
+      this.soundManager.playSound(name, volumeScale);
+    }
+  }
+
+
   
   updateCamera() {
     if (this.cameraMode === 'follow' && this.boat) {

@@ -35,7 +35,7 @@ export class Terrain {
     });
 
 
-    const overlay = new NoiseGenerator();
+    const overlay = new NoiseGenerator(this.seed);
     this.heightMapOverlay = overlay.generateHeightmap(this.mapSize, {
       scale: 0.01,
       octaves: 2,

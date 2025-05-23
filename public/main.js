@@ -97,10 +97,6 @@ singlePlayerStartButton?.addEventListener('click', () => {
   gameCanvas.style.display = "block";
   singlePlayerMenuScreen.classList.add('hidden');
   game = new Game(gameCanvas, socket, seed, host);
-  
-  // Use the new safe playAudio method
-  game.playAudio();
-  
   game.start();
   window.game = game; // for debugging
 });
@@ -208,7 +204,6 @@ startGameButton?.addEventListener('click', () => {
     homeScreen.style.display = "none";
     gameCanvas.style.display = "block";
     game = new Game(gameCanvas, socket, seed, host);
-    game.playAudio(); // Add this line
     game.start();
   }
 });
@@ -218,7 +213,6 @@ socket.on('gameStarted', () => {
   homeScreen.style.display = "none";
   gameCanvas.style.display = "block";
   game = new Game(gameCanvas, socket, seed, host);
-  game.playAudio(); // Add this line
   game.start();
 });
 });
