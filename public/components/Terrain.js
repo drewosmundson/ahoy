@@ -3,25 +3,43 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 
 export class Terrain {
-  constructor(scene, seed) {
+  constructor(scene, socket, host, terrainMesh){
     this.scene = scene;
     this.mapSize = 512;
-    this.lowPoly = false;
+    this.lowPoly = true;
     this.terrainSize = 512; // Size in world units
     this.heightMultiply = 90;
-    this.seed = seed;
+    this.socket = socket;
+    this.host = host;
     
+    this.socket.emit("debug");
     // Generate terrain data
-    this.generateTerrain();
+    if (this.host) {
+      this.generateTerrain();
+      this.mesh = this.createTerrainMesh();
+      this.socket.emit("terrainGenerated", {
+        terrainMesh: this.terrainMesh
+      });
+      this.socket.emit("debug");
+    }
+    
+    else{
+      // If not host, use provided terrain mesh
+      this.mesh = terrainMesh;
+      this.heightmap = terrainMesh.heightmap;
+      this.heightMapOverlay = terrainMesh.heightMapOverlay;
+    }
     
     // Create and add terrain mesh to scene
-    this.mesh = this.createTerrainMesh();
+
     this.scene.add(this.mesh);
   }
+
+
   
   generateTerrain() {
     // Create noise generator
-    const noise = new NoiseGenerator(this.seed);
+    const noise = new NoiseGenerator();
 
     // Generate height map with falloff for island effect
     this.heightmap = noise.generateHeightmap(this.mapSize, {
@@ -35,7 +53,7 @@ export class Terrain {
     });
 
 
-    const overlay = new NoiseGenerator(this.seed);
+    const overlay = new NoiseGenerator()
     this.heightMapOverlay = overlay.generateHeightmap(this.mapSize, {
       scale: 0.01,
       octaves: 2,
@@ -57,7 +75,7 @@ export class Terrain {
       // const noise = new NoiseGenerator();
       // this.heightMapOverlay = noise.addTerrainFeatures(this.heightMapOverlay);
       // Create low-poly terrain with fewer segments
-      const segmentCount = Math.floor(size / 8);
+      const segmentCount = Math.floor(size / 4);
       geometry = new THREE.PlaneGeometry(this.terrainSize, this.terrainSize, segmentCount, segmentCount);
       geometry.rotateX(-Math.PI / 2);
       
@@ -75,9 +93,6 @@ export class Terrain {
       }
     } else {
       // Create regular terrain with more detail
-      // create more randowm mountains and valleys
-      // const noise = new NoiseGenerator();
-      // this.heightMap = noise.addTerrainFeatures(this.heightmap); 
 
 
       geometry = new THREE.PlaneGeometry(this.terrainSize, this.terrainSize, size - 1, size - 1);
