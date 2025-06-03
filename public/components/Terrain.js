@@ -3,7 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 
 export class Terrain {
-  constructor(scene, socket, host, terrainMesh){
+  constructor(scene, socket, host, terrainData){
     this.scene = scene;
     this.mapSize = 512;
     this.lowPoly = true;
@@ -11,27 +11,28 @@ export class Terrain {
     this.heightMultiply = 90;
     this.socket = socket;
     this.host = host;
-    
-    this.socket.emit("debug");
+
+
     // Generate terrain data
     if (this.host) {
       this.generateTerrain();
       this.mesh = this.createTerrainMesh();
       this.socket.emit("terrainGenerated", {
-        terrainMesh: this.terrainMesh
+        terrainData: {
+          heightMap: this.heightmap,
+          heightMapOverlay: this.heightMapOverlay
+        }
       });
-      this.socket.emit("debug");
     }
     
     else{
-      // If not host, use provided terrain mesh
-      this.mesh = terrainMesh;
-      this.heightmap = terrainMesh.heightmap;
-      this.heightMapOverlay = terrainMesh.heightMapOverlay;
+      // If not host, use provided terrain mesh skip generating terrain data
+      this.heightmap = terrainData.heightMap;
+      this.heightMapOverlay = terrainData.heightMapOverlay;
+      this.mesh = this.createTerrainMesh();
     }
-    
-    // Create and add terrain mesh to scene
 
+    // Create and add terrain mesh to scene
     this.scene.add(this.mesh);
   }
 
@@ -87,7 +88,7 @@ export class Terrain {
         
         if (x < size && y < size) {
           // Add random variation for jagged look
-          const randomHeight = Math.random() * 0.8;
+          const randomHeight =  0.8; // * Math.random();
           vertices[i + 1] = this.heightmap[y < size ? y : size-1][x < size ? x : size-1] * this.heightMapOverlay[y][x] * this.heightMultiply + randomHeight;
         }
       }

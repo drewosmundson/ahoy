@@ -24,6 +24,7 @@
         <button id="singlePlayerMenuButton">Single Player</button>
         <button id="joinLobbyMenuButton">Join Lobby</button> 
         <button id="createLobbyMenuButton">Create Lobby</button>
+        <button id="joinMMOButton">Join MMO</button>
       </div>
 
       <!-- Single Player Menu -->
@@ -33,24 +34,29 @@
 
       <div id="createLobbyScreen" class="section hidden">
         <div id="createLobbyForm">
-          <label for="lobbyName">Lobby Name:</label>
-          <input type="text" id="lobbyName" name="lobbyName" required />
+          <label for="hostNickname">Your Name:</label>
+          <input type="text" id="hostNickname" name="hostNickname"/>
           <button id="createLobbyButton">Create Lobby</button>
         </div>
       </div>
 
       <div id="joinLobbyScreen" class="section hidden">
         <div id="joinLobbyForm">
-          <label for="lobbyCode">Lobby Code:</label>
-          <input type="text" id="lobbyCode" name="lobbyCode" required />
-          <button id="joinLobbyButton">Join Lobby</button>
+          <div>
+            <label for="clientNickname">Your Name:</label>
+            <input type="text" id="clientNickname" name="clientNickname" />
+            </div>
+            <label for="lobbyCode">Lobby Code:</label>
+            <input type="text" id="lobbyCode" name="lobbyCode" required />
+          <div>
+            <button id="joinLobbyButton">Join Lobby</button>
+          </div>
         </div>
       </div>
 
 
       <div id="hostLobbyScreen" class="section hidden">
         <div id="lobbyInfo">
-          <h2>Lobby Name: <span id="lobbyNameDisplay"></span></h2>
           <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
         </div>
         <div id="playerList">
@@ -59,15 +65,19 @@
         </div>
         <button id="startGameButton">Start Game</button>
         <button id="leaveLobbyButton">Leave Lobby</button>
+
+
+        <!-- TODO -->
         <!-- lobby chat -->
-        <div id="lobbyChat">
+        <!-- <div id="lobbyChat">
           <h3>Lobby Chat:</h3>
           <ul id="chatMessages"></ul>
           <input type="text" id="chatInput" placeholder="Type a message..." />
           <button id="sendChatButton">Send</button>
-        </div>
+        </div> -->
+
         <!-- lobby settings -->
-        <div id="lobbySettings">
+        <!-- <div id="lobbySettings">
           <h3>Lobby Settings:</h3>
           <label for="gameMode">Game Mode:</label>
           <select id="gameMode">
@@ -81,13 +91,13 @@
             <option value="default">Default</option>
             <option value="noIslands">No Islands</option>
           </select>
-        </div>
+        </div> -->
+
       </div>
 
 
       <div id="participantLobbyScreen" class="section hidden">
         <div id="lobbyInfo">
-          <h2>Lobby Name: <span id="lobbyNameDisplay"></span></h2>
           <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
         </div>
         <div id="playerList">
@@ -96,12 +106,13 @@
         </div>
         <button id="leaveLobbyButton">Leave Lobby</button>
 
-        <div id="lobbyChat">
+        <!-- TODO -->
+        <!-- <div id="lobbyChat">
           <h3>Lobby Chat:</h3>
           <ul id="chatMessages"></ul>
           <input type="text" id="chatInput" placeholder="Type a message..." />
           <button id="sendChatButton">Send</button>
-        </div>
+        </div> -->
 
         <div id="watingForHost">
           <h2>Waiting for host to start the game...</h2>

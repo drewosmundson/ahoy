@@ -9,8 +9,7 @@ import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
 
 export class Game {
-  constructor(canvas, socket, host, terrainMesh) { 
-
+  constructor(canvas, socket, host, terrainData){
     // Core properties
     this.canvas = canvas;
     this.scene = new THREE.Scene();
@@ -19,7 +18,7 @@ export class Game {
     this.difficulty = 1;
     this.socket = socket;
     this.host = host;
-    this.terrainMesh = terrainMesh; // Used if not host
+    this.terrainData = terrainData; // Used if not host
 
     // Initialize core systems
     this.initRenderer();
@@ -29,7 +28,7 @@ export class Game {
     this.initControls();
     
     // Create game components
-    this.terrain = new Terrain(this.scene, this.socket, this.host, this.terrainMesh);
+    this.terrain = new Terrain(this.scene, this.socket, this.host, this.terrainData);
     this.water = new Water(this.scene, this.waterLevel);
     this.boat = new Boat(this.scene, this.waterLevel, this.socket);
     this.skybox = new Skybox(this.scene);
