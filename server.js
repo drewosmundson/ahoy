@@ -24,11 +24,7 @@ const lobbies = {};
 function generateLobbyCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
-function printArrayValues(array){
-  let values = [];
-  array.forEach(function(item) { values.push(item); });
-  console.log(values);
-}
+
 
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
@@ -115,6 +111,11 @@ io.on("connection", (socket) => {
       socket.emit("error", { message: "Lobby not found" });
     }
   });
+  socket.on('playerUpdate', (data) => {
+    console.log('playerUpdated');
+    console.log("x: " + data.updatedBoatPosition.x);
+    console.log("z: " + data.updatedBoatPosition.z);
+  })
 
   socket.on("leaveLobbyRequest", () => {
     if (currentLobby && lobbies[currentLobby]) {
@@ -263,3 +264,11 @@ socket.on("disconnect", () => {
 
 });
 
+
+
+// debugging 
+function printArrayValues(array){
+  let values = [];
+  array.forEach(function(item) { values.push(item); });
+  console.log(values);
+}

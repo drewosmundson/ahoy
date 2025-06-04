@@ -8,6 +8,7 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
 
+
 export class Game {
   constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
     this.canvas = canvas;
@@ -15,6 +16,11 @@ export class Game {
     this.cameraMode = 'free';
     this.waterLevel = 10;
     this.difficulty = 1;
+
+
+  
+
+    this.shouldEmitToServer = multiplayer;
 
     this.socket = socket;
     this.multiplayer = multiplayer;
@@ -33,9 +39,13 @@ export class Game {
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
 
+
+    this.lastBoatPositionX = this.boat.model.position.x;
+    this.lastBoatPositionZ = this.boat.model.position.z;
+    this.lastBoatRotationY = this.boat.model.rotation.y;
+
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
-
   }
 
   initRenderer() {
@@ -165,12 +175,40 @@ export class Game {
 
   update(time) {
     this.water?.update(time);
+
+
+
     this.boat?.update(time, this.input.boatMovement, this.terrain);
     this.updateCamera();
 
     if (this.controls?.enabled) {
       this.controls.update();
     }
+    if(this.multiplayer) {
+        // increase or decrease these numbers for more or less position updates
+      
+        if (Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 1){
+          this.lastBoatPositionX = this.boat.model.position.x;
+          this.shouldEmitToServer = true;
+        }
+        if (Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 1){
+          this.lastBoatPositionZ = this.boat.model.position.z;
+          this.shouldEmitToServer = true;
+        }
+        if (Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 1){
+          this.lastBoatRotationY = this.boat.model.rotation.y;
+          this.shouldEmitToServer = true;
+        }
+
+        if (this.shouldEmitToServer) {
+        this.socket.emit('playerUpdate', {
+           updatedBoatPosition: this.boat.model.position,
+           updatedBoatRotation: this.boat.model.rotation
+         });
+        }
+    }
+      this.shouldEmitToServer = false;
+    
   }
 
   render() {

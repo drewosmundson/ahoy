@@ -31,18 +31,22 @@ export class InputController {
       switch(event.key) {
         // Movement controls
         case 'w':
+        case 'W':
         case 'ArrowUp':
           this.boatMovement.forward = true;
           break;
         case 's':
+        case 'S':
         case 'ArrowDown':
           this.boatMovement.backward = true;
           break;
         case 'a':
+        case 'A':
         case 'ArrowLeft':
           this.boatMovement.left = true;
           break;
         case 'd':
+        case 'D':
         case 'ArrowRight':
           this.boatMovement.right = true;
           break;
@@ -68,18 +72,22 @@ export class InputController {
     handleKeyUp(event) {
       switch(event.key) {
         case 'w':
+        case 'W':
         case 'ArrowUp':
           this.boatMovement.forward = false;
           break;
         case 's':
+        case 'S':
         case 'ArrowDown':
           this.boatMovement.backward = false;
           break;
         case 'a':
+        case 'A':
         case 'ArrowLeft':
           this.boatMovement.left = false;
           break;
         case 'd':
+        case 'D':
         case 'ArrowRight':
           this.boatMovement.right = false;
           break;
