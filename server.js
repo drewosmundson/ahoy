@@ -1,9 +1,12 @@
-import { MultiplayerTerrain } from './MultiplayerTerrain.js';
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { HeightmapGenerator } from './HeightmapGenerator.js';
 
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -11,7 +14,6 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
-
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
@@ -22,6 +24,11 @@ const lobbies = {};
 function generateLobbyCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
+function printArrayValues(array){
+  let values = [];
+  array.forEach(function(item) { values.push(item); });
+  console.log(values);
+}
 
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
@@ -30,12 +37,16 @@ io.on("connection", (socket) => {
   socket.on("createLobbyRequest", (data) => {
     const lobbyCode = generateLobbyCode();
     const lobbyName = data?.lobbyName || `Lobby ${lobbyCode}`;
-    const multiplayerTerrain = new MultiplayerTerrain();
+    const heightmapGenerator = new HeightmapGenerator();
+    const heightmap = heightmapGenerator.heightmap;
+    const heightmapOverlay = heightmapGenerator.heightmapOverlay;
+    printArrayValues(heightmap);
 
     lobbies[lobbyCode] = {
       id: lobbyCode,
       host: socket.id,
-      terrainData: multiplayerTerrain.terrainData,
+      heightmap: heightmap,
+      heightmapOverlay: heightmapOverlay,
       players: [{
         id: socket.id,
         name: `Player ${socket.id.substr(0, 4)}`,
@@ -57,7 +68,9 @@ io.on("connection", (socket) => {
     socket.emit("lobbyCreated", {
       lobbyId: lobbyCode,
       lobbyName,
-      players: lobbies[lobbyCode].players
+      players: lobbies[lobbyCode].players,
+      heightmap: lobbies[lobbyCode].heightmap,
+      heightmapOverlay: lobbies[lobbyCode].heightmapOverlay
     });
   });
   socket.on("joinLobbyRequest", (data) => {
@@ -83,7 +96,8 @@ io.on("connection", (socket) => {
         lobbyId,
         lobbyName: lobby.name,
         players: lobby.players,
-        terrainData: lobby.terrainData,
+        heightmap: lobby.heightmap,
+        heightmapOverlay: lobby.heightmapOverlay,
         gameStarted: lobby.gameStarted
       });
 
@@ -137,9 +151,12 @@ io.on("connection", (socket) => {
 
   socket.on("startGame", (data) => {
     const { lobbyId } = data;
-
+    console.log("start game button")
     if (currentLobby && lobbies[currentLobby] && lobbies[currentLobby].host === socket.id) {
+      console.log("current lobby host")
       lobbies[currentLobby].gameStarted = true;
+      io.to(currentLobby).emit("gameStarted");
+      console.log("current lobby host")
     }
   });
 
@@ -178,6 +195,9 @@ io.on("connection", (socket) => {
         ...action
       });
     }
+  });
+  socket.on("debug", () => {
+    console.log("debug")
   });
 
   socket.on("confirmGameStart", (data) => {

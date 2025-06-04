@@ -3,30 +3,23 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 
 export class Terrain {
-  constructor(scene, socket, host, terrainData) {
+  constructor(scene, socket, multiplayer, heightmap, heightmapOverlay) {
     this.scene = scene;
     this.mapSize = 512;
     this.lowPoly = true;
     this.terrainSize = 512;
     this.heightMultiply = 90;
     this.socket = socket;
-    this.host = host;
 
-    if (this.host) {
-      this.generateTerrain();
-      this.mesh = this.createTerrainMesh();
-      this.socket.emit("terrainGenerated", {
-        terrainData: {
-          heightMap: this.heightmap,
-          heightMapOverlay: this.heightMapOverlay
-        }
-      });
+    this.multiplayer = multiplayer;
+
+    if (this.multiplayer) {
+      this.heightmap = heightmap;
+      this.heightmapOverlay = heightmapOverlay;
     } else {
-      this.heightmap = terrainData.heightMap;
-      this.heightMapOverlay = terrainData.heightMapOverlay;
-      this.mesh = this.createTerrainMesh();
+      this.generateTerrain();
     }
-
+    this.mesh = this.createTerrainMesh();
     this.scene.add(this.mesh);
   }
 
@@ -43,7 +36,7 @@ export class Terrain {
     });
 
     const overlay = new NoiseGenerator();
-    this.heightMapOverlay = overlay.generateHeightmap(this.mapSize, {
+    this.heightmapOverlay = overlay.generateHeightmap(this.mapSize, {
       scale: 0.01,
       octaves: 2,
       persistence: 0.5,
@@ -72,7 +65,7 @@ export class Terrain {
 
       if (x < size && y < size) {
         const baseHeight = this.heightmap[y][x];
-        const overlay = this.heightMapOverlay[y][x];
+        const overlay = this.heightmapOverlay[y][x];
         const finalHeight = baseHeight * overlay * this.heightMultiply + (this.lowPoly ? 0.8 : 0);
         vertices[i + 1] = finalHeight;
       }
@@ -109,7 +102,7 @@ export class Terrain {
       heightmapZ >= 0 && heightmapZ < this.mapSize
     ) {
       const height = this.heightmap[heightmapZ][heightmapX];
-      const overlay = this.heightMapOverlay[heightmapZ][heightmapX];
+      const overlay = this.heightmapOverlay[heightmapZ][heightmapX];
       return height * overlay * this.heightMultiply;
     }
 

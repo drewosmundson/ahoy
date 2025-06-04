@@ -1,7 +1,6 @@
 
 // NoiseGenerator.js - Utility for generating noise-based heightmaps
-import { SimplexNoise } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/math/SimplexNoise.js';
-
+import { SimplexNoise } from "./SimplexNoise.js"
 
 export class NoiseGenerator {
   constructor() {

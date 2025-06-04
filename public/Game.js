@@ -9,7 +9,7 @@ import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
 
 export class Game {
-  constructor(canvas, socket, host, terrainData) {
+  constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
     this.cameraMode = 'free';
@@ -17,8 +17,9 @@ export class Game {
     this.difficulty = 1;
 
     this.socket = socket;
-    this.host = host;
-    this.terrainData = terrainData;
+    this.multiplayer = multiplayer;
+    this.heightmap = heightmap;
+    this.heightmapOverlay = heightmapOverlay;
 
     this.initRenderer();
     this.initCamera();
@@ -26,7 +27,7 @@ export class Game {
     this.initLighting();
     this.initControls();
 
-    this.terrain = new Terrain(this.scene, this.socket, this.host, this.terrainData);
+    this.terrain = new Terrain(this.scene, this.socket, this.multiplayer, this.heightmap, this.heightmapOverlay);
     this.water = new Water(this.scene, this.waterLevel);
     this.boat = new Boat(this.scene, this.waterLevel, this.socket);
     this.skybox = new Skybox(this.scene);

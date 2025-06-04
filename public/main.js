@@ -50,8 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let socket = null;
   let game;
   let host = true;
-  let terrainData = null;
+  let heightmap = null;
+  let heightmapOverlay = null;
   let currentLobbyId = null;
+  let multiplayer = false;
 
   try {
     socket = io();
@@ -76,42 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function showMainMenu() {
-    hideAllScreens();
-    mainMenuScreen.classList.remove('hidden');
-    currentLobbyId = null;
-    terrainData = null;
-  }
 
   /////////////////////////////////////////////////////
   // Game Start
-  /////////////////////////////////////////////////////
-
-  function startGameForPlayer() {
-    console.log('=== STARTING GAME FOR PLAYER ===');
-
-    hideAllScreens();
-    homeScreen.style.display = 'none';
-    gameCanvas.style.display = 'block';
-
-    console.log('🎮 Creating new Game instance');
-
-    game = new Game(gameCanvas, socket, host, terrainData);
-    game.start();
-    window.game = game; // For debugging
-
-    console.log('✅ Game started successfully');
-
-    if (currentLobbyId && socket.connected) {
-      socket.emit('confirmGameStart', {
-        lobbyId: currentLobbyId,
-        socketId: socket.id
-      });
-    }
-  }
-
-  /////////////////////////////////////////////////////
-  // Menu Event Handlers
   /////////////////////////////////////////////////////
 
   // Single Player
@@ -121,8 +90,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   singlePlayerStartButton?.addEventListener('click', () => {
-    startGameForPlayer();
+    startGameForSinglePlayer();
   });
+
+  function startGameForSinglePlayer() {
+    multiplayer = false;
+    hideAllScreens();
+    homeScreen.style.display = 'none';
+    gameCanvas.style.display = 'block';
+
+    game = new Game(gameCanvas, socket, multiplayer, heightmap, heightmapOverlay);
+    game.start();
+    window.game = game; // For debugging
+  }
+
+
+  /////////////////////////////////////////////////////
+  // Menu Event Handlers
+  /////////////////////////////////////////////////////
 
   // Create Lobby
   createLobbyMenuButton?.addEventListener('click', () => {
@@ -159,6 +144,9 @@ document.addEventListener('DOMContentLoaded', () => {
     currentLobbyId = data.lobbyId;
     host = true;
 
+    heightmap = data.heightmap;
+    heightmapOverlay = data.heightmapOverlay;
+
     lobbyCodeDisplay.forEach(el => {
       if (el) el.textContent = data.lobbyId;
     });
@@ -172,6 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentLobbyId = data.lobbyId;
     host = false;
+
+    heightmap = data.heightmap;
+    heightmapOverlay = data.heightmapOverlay;
 
     lobbyCodeDisplay.forEach(el => {
       if (el) el.textContent = data.lobbyId;
@@ -192,14 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socket.on('gameStarted', (data) => {
-    console.log('=== RECEIVED GAME STARTED EVENT ===');
-
-    terrainData = data.terrainData;
-
-    if (!host) {
-      console.log('🚀 Starting game for non-host player');
-      setTimeout(startGameForPlayer, 100);
+    multiplayer = true;
+    hideAllScreens();
+    homeScreen.style.display = 'none';
+    gameCanvas.style.display = 'block';
+    if(heightmap == null){
+      socket.emit("debug");
     }
+
+    game = new Game(gameCanvas, socket, multiplayer, heightmap, heightmapOverlay);
+    game.start();
+    window.game = game;
   });
 
   socket.on('terrainDataReceived', (data) => {
@@ -238,12 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   startGameButton?.addEventListener('click', () => {
-    console.log('=== HOST START GAME BUTTON CLICKED ===');
     if (host && currentLobbyId) {
       socket.emit('startGame', { lobbyId: currentLobbyId });
-      startGameForPlayer();
-    } else {
-      console.log('❌ Cannot start game - missing requirements');
     }
   });
 });
