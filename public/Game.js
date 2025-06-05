@@ -8,9 +8,7 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
 
-
 export class Game {
-
   constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
@@ -19,13 +17,15 @@ export class Game {
     this.difficulty = 1;
     
     this.enemyBoats = {};
-
     this.shouldEmitToServer = multiplayer;
 
     this.socket = socket;
     this.multiplayer = multiplayer;
     this.heightmap = heightmap;
     this.heightmapOverlay = heightmapOverlay;
+
+    // FIX: Track event listeners to prevent duplicates
+    this.eventListenersAdded = false;
 
     this.initRenderer();
     this.initCamera();
@@ -39,18 +39,32 @@ export class Game {
     this.skybox = new Skybox(this.scene);
     this.input = new InputController(this);
 
-
     this.lastBoatPositionX = this.boat.model.position.x;
     this.lastBoatPositionZ = this.boat.model.position.z;
     this.lastBoatRotationY = this.boat.model.rotation.y;
 
+    // FIX: Throttle position updates
+    this.lastEmitTime = 0;
+    this.emitInterval = 50; // Emit every 50ms instead of every frame
+
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
 
+    // FIX: Only add socket listeners once
+    if (this.multiplayer && !this.eventListenersAdded) {
+      this.setupSocketListeners();
+      this.eventListenersAdded = true;
+    }
+  }
+
+  // FIX: Separate method for socket listeners
+  setupSocketListeners() {
+    // Remove any existing listeners first
+    this.socket.off('playerUpdate');
+    
     this.socket.on('playerUpdate', (data) => {
       this.updateEnemyBoatPosition(data);
     });
-
   }
 
   initRenderer() {
@@ -104,11 +118,14 @@ export class Game {
   }
 
   updateEnemyBoatPosition(data) {
-    const { id, position, rotation } = data;
+    const { playerId, position, rotation } = data;
+
+    // Don't update our own boat
+    if (playerId === this.socket.id) return;
 
     // Check if the enemy boat already exists
-    if (this.enemyBoats[id]) {
-      const enemyBoat = this.enemyBoats[id];
+    if (this.enemyBoats[playerId]) {
+      const enemyBoat = this.enemyBoats[playerId];
       enemyBoat.model.position.set(position.x, this.waterLevel, position.z);
       enemyBoat.model.rotation.y = rotation;
     } else {
@@ -117,9 +134,10 @@ export class Game {
       enemyBoat.model.position.set(position.x, this.waterLevel, position.z);
       enemyBoat.model.rotation.y = rotation;
       this.scene.add(enemyBoat.model);
-      this.enemyBoats[id] = enemyBoat;
+      this.enemyBoats[playerId] = enemyBoat;
     }
   }
+
   toggleFog() {
     if (this.scene.fog) {
       this.scene.fog = null;
@@ -195,46 +213,42 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
-
-
   update(time) {
     this.water?.update(time);
-
     this.boat?.update(time, this.input.boatMovement, this.terrain);
     this.updateCamera();
 
     if (this.controls?.enabled) {
       this.controls.update();
     }
-    if(this.multiplayer) {
-        // increase or decrease these numbers for more or less position updates
-      
-        if (Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 0.1){
-          this.lastBoatPositionX = this.boat.model.position.x;
-          this.shouldEmitToServer = true;
-        }
-        if (Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 0.1){
-          this.lastBoatPositionZ = this.boat.model.position.z;
-          this.shouldEmitToServer = true;
-        }
-        if (Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 0.1){
-          this.lastBoatRotationY = this.boat.model.rotation.y;
-          this.shouldEmitToServer = true;
-        }
 
-        if (this.shouldEmitToServer) {
-          this.socket.emit('playerUpdate', {
-            id: this.socket.id,
-            position: {
-              x: this.boat.model.position.x,
-              z: this.boat.model.position.z
-            },
-            rotation: this.boat.model.rotation.y
-          });
-        }
+    // FIX: Throttled multiplayer updates
+    if (this.multiplayer) {
+      const now = Date.now();
+      
+      // Check if position changed significantly
+      const positionChanged = 
+        Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 0.5 ||
+        Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 0.5 ||
+        Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 0.2;
+
+      // Only emit if position changed and enough time has passed
+      if (positionChanged && (now - this.lastEmitTime) > this.emitInterval) {
+        this.lastBoatPositionX = this.boat.model.position.x;
+        this.lastBoatPositionZ = this.boat.model.position.z;
+        this.lastBoatRotationY = this.boat.model.rotation.y;
+        this.lastEmitTime = now;
+
+        this.socket.emit('playerUpdate', {
+          id: this.socket.id,
+          position: {
+            x: this.boat.model.position.x,
+            z: this.boat.model.position.z
+          },
+          rotation: this.boat.model.rotation.y
+        });
+      }
     }
-      this.shouldEmitToServer = false;
-    
   }
 
   render() {
@@ -252,5 +266,31 @@ export class Game {
 
   stop() {
     this.renderer.setAnimationLoop(null);
+  }
+
+  // FIX: Clean up method
+  cleanup() {
+    // Remove event listeners
+    if (this.socket && this.eventListenersAdded) {
+      this.socket.off('playerUpdate');
+      this.eventListenersAdded = false;
+    }
+
+    // Clean up Three.js objects
+    if (this.scene) {
+      this.scene.traverse((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) {
+          if (Array.isArray(object.material)) {
+            object.material.forEach(material => material.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
+      });
+    }
+
+    // Stop animation loop
+    this.stop();
   }
 }

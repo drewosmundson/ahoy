@@ -25,7 +25,6 @@ function generateLobbyCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
   let currentLobby = null;
@@ -69,6 +68,7 @@ io.on("connection", (socket) => {
       heightmapOverlay: lobbies[lobbyCode].heightmapOverlay
     });
   });
+
   socket.on("joinLobbyRequest", (data) => {
     const { lobbyId } = data;
 
@@ -112,10 +112,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  // FIX: Use socket.to() instead of socket.broadcast for lobby-specific updates
   socket.on('playerUpdate', (data) => {
-      socket.broadcast.emit('playerUpdate', data);
-    });
-
+    if (currentLobby) {
+      // Only broadcast to players in the same lobby
+      socket.to(currentLobby).emit('playerUpdate', {
+        ...data,
+        playerId: socket.id
+      });
+    }
+  });
 
   socket.on("leaveLobbyRequest", () => {
     if (currentLobby && lobbies[currentLobby]) {
@@ -157,7 +163,7 @@ io.on("connection", (socket) => {
       console.log("current lobby host")
       lobbies[currentLobby].gameStarted = true;
       io.to(currentLobby).emit("gameStarted");
-      console.log("current lobby host")
+      console.log("game started for lobby", currentLobby);
     }
   });
 
@@ -181,11 +187,6 @@ io.on("connection", (socket) => {
         playerId: socket.id,
         ...data
       });
-    } else {
-      socket.broadcast.emit("enemyBoatMovement", {
-        playerId: socket.id,
-        ...data
-      });
     }
   });
 
@@ -197,6 +198,7 @@ io.on("connection", (socket) => {
       });
     }
   });
+
   socket.on("debug", () => {
     console.log("debug")
   });
@@ -226,45 +228,43 @@ io.on("connection", (socket) => {
     }
   });
 
-socket.on("disconnect", () => {
-  console.log(`Player disconnected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log(`Player disconnected: ${socket.id}`);
 
-  for (const lobbyId in lobbies) {
-    const lobby = lobbies[lobbyId];
-    const index = lobby.players.findIndex(p => p.id === socket.id);
+    for (const lobbyId in lobbies) {
+      const lobby = lobbies[lobbyId];
+      const index = lobby.players.findIndex(p => p.id === socket.id);
 
-    if (index !== -1) {
-      const wasHost = lobby.players[index].isHost;
+      if (index !== -1) {
+        const wasHost = lobby.players[index].isHost;
 
-      // Remove player
-      lobby.players.splice(index, 1);
-      console.log(`Removing disconnected player: ${socket.id} from lobby ${lobbyId}`);
+        // Remove player
+        lobby.players.splice(index, 1);
+        console.log(`Removing disconnected player: ${socket.id} from lobby ${lobbyId}`);
 
-      // 🔄 Promote new host if necessary
-      if (wasHost && lobby.players.length > 0) {
-        lobby.players[0].isHost = true;
-        console.log(`Promoting new host: ${lobby.players[0].id}`);
+        // Promote new host if necessary
+        if (wasHost && lobby.players.length > 0) {
+          lobby.players[0].isHost = true;
+          lobby.host = lobby.players[0].id; // FIX: Update lobby host reference
+          console.log(`Promoting new host: ${lobby.players[0].id}`);
+        }
+
+        // Delete empty lobby
+        if (lobby.players.length === 0) {
+          delete lobbies[lobbyId];
+          console.log(`Deleted empty lobby ${lobbyId}`);
+        } else {
+          // Notify remaining players
+          io.to(lobbyId).emit("lobbyUpdated", {
+            players: lobby.players
+          });
+        }
+
+        break;
       }
-
-      // 🧼 Delete empty lobby
-      if (lobby.players.length === 0) {
-        delete lobbies[lobbyId];
-        console.log(`Deleted empty lobby ${lobbyId}`);
-      } else {
-        // Notify remaining players
-        io.to(lobbyId).emit("lobbyUpdated", {
-          players: lobby.players
-        });
-      }
-
-      break;
     }
-  }
+  });
 });
-
-});
-
-
 
 // debugging 
 function printArrayValues(array){
