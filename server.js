@@ -111,11 +111,11 @@ io.on("connection", (socket) => {
       socket.emit("error", { message: "Lobby not found" });
     }
   });
+
   socket.on('playerUpdate', (data) => {
-    console.log('playerUpdated');
-    console.log("x: " + data.updatedBoatPosition.x);
-    console.log("z: " + data.updatedBoatPosition.z);
-  })
+      socket.broadcast.emit('playerUpdate', data);
+    });
+
 
   socket.on("leaveLobbyRequest", () => {
     if (currentLobby && lobbies[currentLobby]) {

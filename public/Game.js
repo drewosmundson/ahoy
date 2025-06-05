@@ -10,15 +10,15 @@ import { SoundManager } from './utils/SoundManager.js';
 
 
 export class Game {
+
   constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
     this.cameraMode = 'free';
     this.waterLevel = 10;
     this.difficulty = 1;
-
-
-  
+    
+    this.enemyBoats = {};
 
     this.shouldEmitToServer = multiplayer;
 
@@ -46,6 +46,11 @@ export class Game {
 
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
+
+    this.socket.on('playerUpdate', (data) => {
+      this.updateEnemyBoatPosition(data);
+    });
+
   }
 
   initRenderer() {
@@ -98,6 +103,23 @@ export class Game {
     });
   }
 
+  updateEnemyBoatPosition(data) {
+    const { id, position, rotation } = data;
+
+    // Check if the enemy boat already exists
+    if (this.enemyBoats[id]) {
+      const enemyBoat = this.enemyBoats[id];
+      enemyBoat.model.position.set(position.x, this.waterLevel, position.z);
+      enemyBoat.model.rotation.y = rotation;
+    } else {
+      // If the enemy boat doesn't exist, create it
+      const enemyBoat = new Boat(this.scene, this.waterLevel);
+      enemyBoat.model.position.set(position.x, this.waterLevel, position.z);
+      enemyBoat.model.rotation.y = rotation;
+      this.scene.add(enemyBoat.model);
+      this.enemyBoats[id] = enemyBoat;
+    }
+  }
   toggleFog() {
     if (this.scene.fog) {
       this.scene.fog = null;
@@ -173,10 +195,10 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
+
+
   update(time) {
     this.water?.update(time);
-
-
 
     this.boat?.update(time, this.input.boatMovement, this.terrain);
     this.updateCamera();
@@ -187,24 +209,28 @@ export class Game {
     if(this.multiplayer) {
         // increase or decrease these numbers for more or less position updates
       
-        if (Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 1){
+        if (Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 0.1){
           this.lastBoatPositionX = this.boat.model.position.x;
           this.shouldEmitToServer = true;
         }
-        if (Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 1){
+        if (Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 0.1){
           this.lastBoatPositionZ = this.boat.model.position.z;
           this.shouldEmitToServer = true;
         }
-        if (Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 1){
+        if (Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 0.1){
           this.lastBoatRotationY = this.boat.model.rotation.y;
           this.shouldEmitToServer = true;
         }
 
         if (this.shouldEmitToServer) {
-        this.socket.emit('playerUpdate', {
-           updatedBoatPosition: this.boat.model.position,
-           updatedBoatRotation: this.boat.model.rotation
-         });
+          this.socket.emit('playerUpdate', {
+            id: this.socket.id,
+            position: {
+              x: this.boat.model.position.x,
+              z: this.boat.model.position.z
+            },
+            rotation: this.boat.model.rotation.y
+          });
         }
     }
       this.shouldEmitToServer = false;
