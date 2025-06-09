@@ -17,6 +17,7 @@ export class Game {
     this.cameraMode = 'free';
     this.waterLevel = 10;
     this.difficulty = 1;
+    this.projectile = null;
     
     this.enemyBoats = {};
     this.shouldEmitToServer = multiplayer;
@@ -281,14 +282,24 @@ export class Game {
 
 
   fireProjectile() {
+    // on input fire
+    if (!this.boat) return;
+    if (!this.socket) {
+      console.warn('Socket not initialized, cannot fire projectile');
+      return;
+    } 
 
+    // this.socket.emit projectile fired @ x,z in .. direction
 
-    // socket.emit projectile fired @ x,z in .. direction
+    this.projectile = new Projectile(this.scene, this.socket, this.waterLevel, this.lastBoatPositionX, this.lastBoatPositionZ);
+    this.projectile.setPositionAndRotation(
+      this.boat.model.position.x,
+      this.waterLevel + 0.5,
+      this.boat.model.position.z,
+      this.boat.model.rotation.y
+    );
 
-    const projectile = new Projectile(this.scene, this.waterLevel, this.lastBoatPositionX, this.lastBoatRotationY, this.boat.rotation.y)
-    socket.emit("debug");
-
-
+      
   }
 
   updateProjectiles() {

@@ -2,18 +2,17 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 
 export class Projectile {
-  constructor(scene, waterLevel, boatPositionX, boatPositionZ, boatRotation) {
+  constructor(scene, socket, waterLevel, boatPositionX, boatPositionZ) {
     this.scene = scene; 
-    this.waterLevel = waterLevel;
-    this.terrainHeight = terrainHeight;
     this.socket = socket;
+    this.waterLevel = waterLevel;
     // Movement properties
     this.speed = 5;
     this.angle = 5;
-    
-    this.gravity = 9.8
 
+    this.gravity = 9.8;
     // Create boat model
+
     this.model = this.createProjectileModel();
     
     // Set initial position
@@ -24,17 +23,18 @@ export class Projectile {
   }
   
   createProjectileModel() {
+
     // Create  group to hold all parts
     // Creates a group for future additions to model
     const projectile = new THREE.Group();
-    projectile.position.set()
-    // create projectile
-    const sphere = new THREE.SphereGeometry( 1, 1, 1 )
+    projectile.position.set();
+
+    // create 
+    const sphere = new THREE.SphereGeometry( 1, 1, 1 );
     const sphereMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
     const sphereMesh = new THREE.Mesh(sphere, sphereMat);
-    sphere.position.y = 0.5; // Half height above water
+    projectile.position.set(this.boatPositionX, this.waterLevel + 1, this.boatPositionZ);
     projectile.add(sphereMesh);
-
     // Set Hit Box
     const boundingBox = new THREE.Box3();
     boundingBox.setFromObject(projectile);
