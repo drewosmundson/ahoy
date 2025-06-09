@@ -65,6 +65,9 @@ export class InputController {
           this.game.toggleFog();
           break;
           
+        case 'e':
+          this.game.fireProjectile();
+          break;
         // Add more controls as needed
       }
     }

@@ -8,6 +8,7 @@ import { Boat } from './components/Boat.js';
 import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
+import { Projectile } from './components/Projectile.js';
 
 export class Game {
   constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
@@ -195,10 +196,6 @@ export class Game {
   handleMultiPlayerJoin() {
     this.socket.on('playerJoin', (data) => {
       const enemyBoat = new Boat(this.scene, this.waterLevel);
-      enemyBoat.model.position.set(data.position.x, this.waterLevel, data.position.z);
-      enemyBoat.model.rotation.y = data.rotation;
-      this.scene.add(enemyBoat.model);
-      
       // Initialize interpolation data
       this.enemyBoats[data.id] = {
         boat: enemyBoat,
@@ -280,6 +277,22 @@ export class Game {
       const newRotY = this.lerpAngle(startRot, targetRot, easedFactor);
       boat.model.rotation.y = newRotY;
     });
+  }
+
+
+  fireProjectile() {
+
+
+    // socket.emit projectile fired @ x,z in .. direction
+
+    const projectile = new Projectile(this.scene, this.waterLevel, this.lastBoatPositionX, this.lastBoatRotationY, this.boat.rotation.y)
+    socket.emit("debug");
+
+
+  }
+
+  updateProjectiles() {
+
   }
 
   toggleFog() {
