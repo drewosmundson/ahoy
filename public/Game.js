@@ -235,7 +235,8 @@ export class Game {
       data.position.x,
       data.position.y,
       data.position.z,
-      data.rotation
+      data.rotation,
+      data.sideOfBoat
     );
 
     // Add to projectiles array so it gets updated
@@ -320,7 +321,7 @@ export class Game {
 
 
   // Update the fireProjectile method:
-  fireProjectile() {
+  fireProjectile(sideOfBoat) {
     if (!this.boat) return;
     if (!this.socket) {
       console.warn('Socket not initialized, cannot fire projectile');
@@ -342,7 +343,8 @@ export class Game {
       this.boat.model.position.x,
       this.waterLevel + 2, // Launch from slightly above water
       this.boat.model.position.z,
-      this.boat.model.rotation.y
+      this.boat.model.rotation.y,
+      sideOfBoat
     );
 
     // Add to projectiles array
@@ -356,7 +358,8 @@ export class Game {
         z: this.boat.model.position.z
       },
       rotation: this.boat.model.rotation.y,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      sideOfBoat
     });
   }
 

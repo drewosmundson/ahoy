@@ -55,14 +55,14 @@ export class Projectile {
     return projectile;
   }
   
-  setPositionAndRotation(x, y, z, rotation) {
+  setPositionAndRotation(x, y, z, rotation, sideOfBoat) {
     if (!this.model) return;
     
     // Set position
     this.model.position.set(x, y, z);
     
     // Store launch direction for physics calculations
-    this.launchDirection = rotation;
+    this.launchDirection = rotation + sideOfBoat;
     
     // Calculate initial velocity components
     this.velocityX = Math.sin(this.launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);

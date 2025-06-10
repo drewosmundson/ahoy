@@ -1,4 +1,3 @@
-// InputController.js - Handles user input for game controls
 
 export class InputController {
     constructor(game) {
@@ -14,6 +13,8 @@ export class InputController {
       };
       // Initialize keyboard controls
       this.initKeyboardControls();
+      // Initialize mouse controls
+      this.initMouseControls();
     }
     
     initKeyboardControls() {
@@ -26,6 +27,29 @@ export class InputController {
       window.addEventListener('keyup', (event) => {
         this.handleKeyUp(event);
       });
+    }
+    
+    initMouseControls() {
+      // Add mouse click event listener
+      window.addEventListener('mousedown', (event) => {
+        this.handleMouseDown(event);
+      });
+      
+      // Prevent context menu on right click (optional)
+      window.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+      });
+    }
+    
+    handleMouseDown(event) {
+      switch(event.button) {
+        case 0: // Left mouse button
+          this.game.fireProjectile(this.left);
+          break;
+        case 2: // Right mouse button
+          this.game.fireProjectile(this.right);
+          break;
+      }
     }
     
     handleKeyDown(event) {
@@ -66,13 +90,13 @@ export class InputController {
           this.game.toggleFog();
           break;
           
-        case 'e':
-          this.game.fireProjectile(this.right);
-          break;
-        case 'q':
-          this.game.fireProjectile(this.left);
-          break;
-        // Add more controls as needed
+        // Removed Q and E key controls - now using mouse
+        // case 'e':
+        //   this.game.fireProjectile(this.right);
+        //   break;
+        // case 'q':
+        //   this.game.fireProjectile(this.left);
+        //   break;
       }
     }
     

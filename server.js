@@ -197,7 +197,8 @@ io.on("connection", (socket) => {
           playerId: socket.id,
           position: data.position,
           rotation: data.rotation,
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
+          sideOfBoat: data.sideOfBoat
         });
         console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
       }
