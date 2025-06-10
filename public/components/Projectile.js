@@ -29,7 +29,7 @@ export class Projectile {
     this.model = this.createProjectileModel();
     
     // Set initial position
-    this.model.position.set(boatPositionX, waterLevel + 2, boatPositionZ);
+    this.model.position.set(boatPositionX, waterLevel + 0.5, boatPositionZ);
     
     // Add to scene
     this.scene.add(this.model);
