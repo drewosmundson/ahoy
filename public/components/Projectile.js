@@ -1,45 +1,57 @@
-// Boat.js - Handles boat creation and movement
+// Projectile.js - Handles projectile creation and physics
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 
 export class Projectile {
-  constructor(scene, socket, waterLevel, boatPositionX, boatPositionZ) {
+  constructor(scene, socket, waterLevel, terrain, boatPositionX, boatPositionZ) {
     this.scene = scene; 
     this.socket = socket;
     this.waterLevel = waterLevel;
-    // Movement properties
-    this.speed = 5;
-    this.angle = 5;
-
-    this.gravity = 9.8;
-    // Create boat model
-
+    this.terrain = terrain;
+    
+    // Physics properties
+    this.initialSpeed = 25; // Initial launch speed
+    this.launchAngle = Math.PI / 8; // 30 degrees launch angle
+    this.gravity = 9.8; // Gravity acceleration
+    
+    // Velocity components
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.velocityZ = 0;
+    
+    // Time tracking
+    this.startTime = Date.now();
+    this.lastUpdateTime = this.startTime;
+    
+    // Launch direction (will be set when firing)
+    this.launchDirection = 0;
+    
+    // Create projectile model
     this.model = this.createProjectileModel();
     
     // Set initial position
-    this.model.position.set(boatPositionX, waterLevel, boatPositionZ);
+    this.model.position.set(boatPositionX, waterLevel + 2, boatPositionZ);
     
     // Add to scene
     this.scene.add(this.model);
+    
+    // Flag to track if projectile is active
+    this.isActive = true;
   }
   
   createProjectileModel() {
-
-    // Create  group to hold all parts
-    // Creates a group for future additions to model
+    // Create group to hold all parts
     const projectile = new THREE.Group();
-    projectile.position.set();
-
-    // create 
-    const sphere = new THREE.SphereGeometry( 1, 1, 1 );
-    const sphereMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-    const sphereMesh = new THREE.Mesh(sphere, sphereMat);
-    projectile.position.set(this.boatPositionX, this.waterLevel + 1, this.boatPositionZ);
+    
+    // Create cannonball sphere
+    const sphereGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+    const sphereMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x2F2F2F,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
     projectile.add(sphereMesh);
-    // Set Hit Box
-    const boundingBox = new THREE.Box3();
-    boundingBox.setFromObject(projectile);
-    projectile.add(boundingBox);
-
+    
     return projectile;
   }
   
@@ -49,70 +61,105 @@ export class Projectile {
     // Set position
     this.model.position.set(x, y, z);
     
-    // Set rotation
-    this.model.rotation.y = rotation;
+    // Store launch direction for physics calculations
+    this.launchDirection = rotation;
+    
+    // Calculate initial velocity components
+    this.velocityX = Math.sin(this.launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);
+    this.velocityY = this.initialSpeed * Math.sin(this.launchAngle);
+    this.velocityZ = Math.cos(this.launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);
   }
   
-
-  update(time, movement, terrain) {
-    if (!this.model) return;
+  update(deltaTime) {
+    if (!this.model || !this.isActive) return false;
     
-    // Get current position and rotation
-    const position = this.model.position;
-    const rotation = this.model.rotation.y;
+    // Convert deltaTime from milliseconds to seconds
+    const dt = deltaTime * 0.001;
     
-    // Calculate movement vector based on boat's rotation
-    let deltaX = 0;
-    let deltaZ = 0;
+    // Apply gravity to vertical velocity
+    this.velocityY -= this.gravity * dt;
     
-    // Forward/backward movement
-    if (movement.forward) {
-      deltaX += Math.sin(rotation) * this.speed;
-      deltaZ += Math.cos(rotation) * this.speed;
-    }
-    if (movement.backward) {
-      deltaX -= Math.sin(rotation) * this.speed * 0.5; // Slower reverse
-      deltaZ -= Math.cos(rotation) * this.speed * 0.5;
-    }
+    // Update position based on velocity
+    this.model.position.x += this.velocityX * dt;
+    this.model.position.y += this.velocityY * dt;
+    this.model.position.z += this.velocityZ * dt;
     
-    // Rotation
-    if (movement.left) {
-      this.model.rotation.y += this.rotationSpeed;
-    }
-    if (movement.right) {
-      this.model.rotation.y -= this.rotationSpeed;
+    // Get current position
+    const currentPos = this.model.position;
+    
+    // Check if projectile has hit water level
+    if (currentPos.y <= this.waterLevel) {
+      console.log('Projectile hit water!');
+      this.destroy();
+      return false;
     }
     
-    // Calculate new position
-    const newX = position.x + deltaX;
-    const newZ = position.z + deltaZ;
-
-    // Check if new position is within map bounds
-    const mapBounds = 450; // Slightly less than map size
-    if (Math.abs(newX) < mapBounds && Math.abs(newZ) < mapBounds) {
-      // Get terrain height at new position
-      const terrainHeight = terrain.getHeightAt(newX, newZ);
-
-      // Only move if boat would be over water
-      if (terrainHeight < this.waterLevel) {
-        position.x = newX;
-        position.z = newZ;
-        
-        // Simulate buoyancy and waves
-        const waveHeight = 0.5;
-        const waveFrequency = 0.07;
-        
-        // Using sine functions for simple wave motion
-        const timeScale = time * 0.001;
-        const noiseX = Math.sin(timeScale + newX * waveFrequency) * 0.5;
-        const noiseZ = Math.cos(timeScale + newZ * waveFrequency) * 0.5;
-        const noiseValue = (noiseX + noiseZ) * 0.5;
-        
-        // Update boat position and rotation with wave effect
-        this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
-        this.model.rotation.x = noiseValue * 0.1;
-        this.model.rotation.z = noiseValue * 0.1;
-      }
+    // Check if projectile has hit terrain
+    const terrainHeight = this.terrain.getHeightAt(currentPos.x, currentPos.z);
+    if (currentPos.y <= terrainHeight) {
+      console.log('Projectile hit terrain!');
+      this.destroy();
+      return false;
     }
+    
+    // Check if projectile is out of bounds (optional)
+    const maxDistance = 500;
+    if (Math.abs(currentPos.x) > maxDistance || Math.abs(currentPos.z) > maxDistance) {
+      console.log('Projectile out of bounds!');
+      this.destroy();
+      return false;
+    }
+    
+    // Add some rotation for visual effect
+    this.model.rotation.x += 0.1;
+    this.model.rotation.z += 0.05;
+    
+    return true; // Projectile is still active
+  }
+  
+  destroy() {
+    if (!this.isActive) return;
+    
+    this.isActive = false;
+    
+    // Remove from scene
+    if (this.scene && this.model) {
+      this.scene.remove(this.model);
+      
+      // Dispose of geometry and materials
+      this.model.traverse((child) => {
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(material => material.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+    }
+    
+    // Optional: Emit destruction event for multiplayer
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('projectileDestroyed', {
+        position: {
+          x: this.model.position.x,
+          y: this.model.position.y,
+          z: this.model.position.z
+        }
+      });
+    }
+  }
+  
+  // Get current position for collision detection with other objects
+  getPosition() {
+    return this.model ? this.model.position.clone() : new THREE.Vector3();
+  }
+  
+  // Check if projectile is still active
+  isProjectileActive() {
+    return this.isActive;
   }
 }

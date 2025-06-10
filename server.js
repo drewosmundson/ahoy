@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 server.listen(PORT, () => {
@@ -186,6 +186,30 @@ io.on("connection", (socket) => {
       socket.to(currentLobby).emit("enemyBoatMovement", {
         playerId: socket.id,
         ...data
+      });
+    }
+  });
+
+  socket.on('projectileFired', (data) => {
+    if (currentLobby) {
+        // Broadcast projectile firing to all other players in the lobby
+        socket.to(currentLobby).emit('enemyProjectileFired', {
+          playerId: socket.id,
+          position: data.position,
+          rotation: data.rotation,
+          timestamp: data.timestamp
+        });
+        console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
+      }
+  });
+
+  // Optional: Handle projectile impacts/explosions
+  socket.on('projectileImpact', (data) => {
+    if (currentLobby) {
+      socket.to(currentLobby).emit('enemyProjectileImpact', {
+        playerId: socket.id,
+        position: data.position,
+        timestamp: data.timestamp
       });
     }
   });

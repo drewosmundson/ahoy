@@ -18,7 +18,11 @@ export class Game {
     this.waterLevel = 10;
     this.difficulty = 1;
     this.projectile = null;
-    
+
+    this.projectiles = []; // Array to track multiple projectiles
+    this.lastTime = 0; // For delta time calculation
+    this.enemyProjectiles = {};
+
     this.enemyBoats = {};
     this.shouldEmitToServer = multiplayer;
 
@@ -63,7 +67,6 @@ export class Game {
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
 
-    // FIX: Only add socket listeners once
     if (this.multiplayer && !this.eventListenersAdded) {
       this.setupSocketListeners();
       this.eventListenersAdded = true;
@@ -129,15 +132,20 @@ export class Game {
     this.cameraPitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
   }
 
-  // FIX: Separate method for socket listeners
-  setupSocketListeners() {
-    // Remove any existing listeners first
-    this.socket.off('playerUpdate');
-    
-    this.socket.on('playerUpdate', (data) => {
-      this.updateEnemyBoatPosition(data);
-    });
-  }
+    setupSocketListeners() {
+      // Remove any existing listeners first
+      this.socket.off('playerUpdate');
+      this.socket.off('enemyProjectileFired');
+      
+      this.socket.on('playerUpdate', (data) => {
+        this.updateEnemyBoatPosition(data);
+      });
+
+      // Handle enemy projectile firing
+      this.socket.on('enemyProjectileFired', (data) => {
+        this.handleEnemyProjectileFired(data);
+      });
+    }
 
   initRenderer() {
     this.renderer = new THREE.WebGLRenderer({
@@ -208,6 +216,36 @@ export class Game {
         lerpDuration: 100 // 100ms interpolation time
       };
     });
+  }
+  handleEnemyProjectileFired(data) {
+    console.log('Enemy projectile fired:', data);
+    
+    // Create enemy projectile
+    const enemyProjectile = new Projectile(
+      this.scene, 
+      this.socket, 
+      this.waterLevel, 
+      this.terrain, 
+      data.position.x, 
+      data.position.z
+    );
+    
+    // Set launch position and direction
+    enemyProjectile.setPositionAndRotation(
+      data.position.x,
+      data.position.y,
+      data.position.z,
+      data.rotation
+    );
+
+    // Add to projectiles array so it gets updated
+    this.projectiles.push(enemyProjectile);
+    
+    // Store reference with player ID for potential cleanup
+    if (!this.enemyProjectiles[data.playerId]) {
+      this.enemyProjectiles[data.playerId] = [];
+    }
+    this.enemyProjectiles[data.playerId].push(enemyProjectile);
   }
 
   updateEnemyBoatPosition(data) {
@@ -281,30 +319,49 @@ export class Game {
   }
 
 
+  // Update the fireProjectile method:
   fireProjectile() {
-    // on input fire
     if (!this.boat) return;
     if (!this.socket) {
       console.warn('Socket not initialized, cannot fire projectile');
       return;
-    } 
+    }
 
-    // this.socket.emit projectile fired @ x,z in .. direction
-
-    this.projectile = new Projectile(this.scene, this.socket, this.waterLevel, this.lastBoatPositionX, this.lastBoatPositionZ);
-    this.projectile.setPositionAndRotation(
+    // Create new projectile
+    const projectile = new Projectile(
+      this.scene, 
+      this.socket, 
+      this.waterLevel, 
+      this.terrain, 
+      this.boat.model.position.x, 
+      this.boat.model.position.z
+    );
+    
+    // Set launch position and direction
+    projectile.setPositionAndRotation(
       this.boat.model.position.x,
-      this.waterLevel + 0.5,
+      this.waterLevel + 2, // Launch from slightly above water
       this.boat.model.position.z,
       this.boat.model.rotation.y
     );
 
-      
+    // Add to projectiles array
+    this.projectiles.push(projectile);
+
+    // Optional: Emit projectile fired event for multiplayer
+    this.socket.emit('projectileFired', {
+      position: {
+        x: this.boat.model.position.x,
+        y: this.waterLevel + 2,
+        z: this.boat.model.position.z
+      },
+      rotation: this.boat.model.rotation.y,
+      timestamp: Date.now()
+    });
   }
 
-  updateProjectiles() {
+  
 
-  }
 
   toggleFog() {
     if (this.scene.fog) {
@@ -425,47 +482,69 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
-  update(time) {
-    this.water?.update(time);
-    this.boat?.update(time, this.input.boatMovement, this.terrain);
-    this.updateCamera();
+// Update the main update method to include projectile updates:
+update(time) {
+  // Calculate delta time
+  const deltaTime = this.lastTime === 0 ? 16 : time - this.lastTime;
+  this.lastTime = time;
 
-    // NEW: Update enemy boat interpolation
-    this.updateEnemyBoatInterpolation();
+  this.water?.update(time);
+  this.boat?.update(time, this.input.boatMovement, this.terrain);
+  this.updateCamera();
 
-    // Only use OrbitControls when not in pointer lock mode and in free camera mode
-    if (this.controls?.enabled && !this.isPointerLocked && this.cameraMode === 'free') {
-      this.controls.update();
-    }
+  // Update projectiles
+  this.updateProjectiles(deltaTime);
 
-    // FIX: Throttled multiplayer updates
-    if (this.multiplayer) {
-      const now = Date.now();
-      
-      // Check if position changed significantly
-      const positionChanged = 
-        Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 1 ||
-        Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 1 ||
-        Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 1;
+  // Update enemy boat interpolation
+  this.updateEnemyBoatInterpolation();
 
-      // Only emit if position changed and enough time has passed
-      if (positionChanged && (now - this.lastEmitTime) > this.emitInterval) {
-        this.lastBoatPositionX = this.boat.model.position.x;
-        this.lastBoatPositionZ = this.boat.model.position.z;
-        this.lastBoatRotationY = this.boat.model.rotation.y;
-        this.lastEmitTime = now;
+  // Only use OrbitControls when not in pointer lock mode and in free camera mode
+  if (this.controls?.enabled && !this.isPointerLocked && this.cameraMode === 'free') {
+    this.controls.update();
+  }
 
-        this.socket.emit('playerUpdate', {
-          id: this.socket.id,
-          position: {
-            x: this.boat.model.position.x,
-            z: this.boat.model.position.z
-          },
-          rotation: this.boat.model.rotation.y
-        });
-      }
+  // Throttled multiplayer updates (existing code remains the same)
+  if (this.multiplayer) {
+    const now = Date.now();
+    
+    const positionChanged = 
+      Math.abs(this.lastBoatPositionX - this.boat.model.position.x) > 1 ||
+      Math.abs(this.lastBoatPositionZ - this.boat.model.position.z) > 1 ||
+      Math.abs(this.lastBoatRotationY - this.boat.model.rotation.y) > 1;
+
+    if (positionChanged && (now - this.lastEmitTime) > this.emitInterval) {
+      this.lastBoatPositionX = this.boat.model.position.x;
+      this.lastBoatPositionZ = this.boat.model.position.z;
+      this.lastBoatRotationY = this.boat.model.rotation.y;
+      this.lastEmitTime = now;
+
+      this.socket.emit('playerUpdate', {
+        id: this.socket.id,
+        position: {
+          x: this.boat.model.position.x,
+          z: this.boat.model.position.z
+        },
+        rotation: this.boat.model.rotation.y
+      });
     }
   }
+}
+
+// Add this new method to handle projectile updates:
+updateProjectiles(deltaTime) {
+  // Update all active projectiles
+  for (let i = this.projectiles.length - 1; i >= 0; i--) {
+    const projectile = this.projectiles[i];
+    
+    // Update projectile physics
+    const stillActive = projectile.update(deltaTime);
+    
+    // Remove inactive projectiles from array
+    if (!stillActive || !projectile.isProjectileActive()) {
+      this.projectiles.splice(i, 1);
+    }
+  }
+}
 
   render() {
     this.renderer.render(this.scene, this.camera);
@@ -484,8 +563,26 @@ export class Game {
     this.renderer.setAnimationLoop(null);
   }
 
-  // ENHANCED: Clean up method with pointer lock cleanup
+  // Update the cleanup method to include enemy projectiles:
   cleanup() {
+    // Clean up all projectiles (including enemy projectiles)
+    this.projectiles.forEach(projectile => {
+      if (projectile.isProjectileActive()) {
+        projectile.destroy();
+      }
+    });
+    this.projectiles = [];
+
+    // Clean up enemy projectiles tracking
+    Object.keys(this.enemyProjectiles).forEach(playerId => {
+      this.enemyProjectiles[playerId].forEach(projectile => {
+        if (projectile.isProjectileActive()) {
+          projectile.destroy();
+        }
+      });
+    });
+    this.enemyProjectiles = {};
+
     // Exit pointer lock if active
     if (this.isPointerLocked) {
       document.exitPointerLock();
@@ -494,6 +591,7 @@ export class Game {
     // Remove event listeners
     if (this.socket && this.eventListenersAdded) {
       this.socket.off('playerUpdate');
+      this.socket.off('enemyProjectileFired');
       this.eventListenersAdded = false;
     }
 

@@ -3,7 +3,8 @@
 export class InputController {
     constructor(game) {
       this.game = game;
-      
+      this.left = 1.5708;
+      this.right = 4.71239;
       // Boat movement state
       this.boatMovement = {
         forward: false,
@@ -66,7 +67,10 @@ export class InputController {
           break;
           
         case 'e':
-          this.game.fireProjectile();
+          this.game.fireProjectile(this.right);
+          break;
+        case 'q':
+          this.game.fireProjectile(this.left);
           break;
         // Add more controls as needed
       }

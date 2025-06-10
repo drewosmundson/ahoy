@@ -76,7 +76,8 @@ export class Terrain {
     const material = new THREE.MeshStandardMaterial({
       color: 0x3d8c40,
       flatShading: this.lowPoly,
-      wireframe: false
+      wireframe: false,
+
     });
 
     return new THREE.Mesh(geometry, material);
