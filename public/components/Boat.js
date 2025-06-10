@@ -12,13 +12,15 @@ export class Boat {
 
     // Create boat model
     this.model = this.createBoatModel();
-    
+
     // Set initial position
-    this.model.position.set(40, waterLevel, 40);
-    
+    this.model.position.set(100, waterLevel, 100);
+    //bad practice fix later
+
     // Add to scene
     this.scene.add(this.model);
   }
+  
   
   createBoatModel() {
     // Create boat group to hold all parts
@@ -134,8 +136,8 @@ export class Boat {
         position.z = newZ;
         
         // Simulate buoyancy and waves
-        const waveHeight = 0.5;
-        const waveFrequency = 0.07;
+        const waveHeight = 0.7;
+        const waveFrequency = 0.09;
         
         // Using sine functions for simple wave motion
         const timeScale = time * 0.001;
@@ -144,7 +146,7 @@ export class Boat {
         const noiseValue = (noiseX + noiseZ) * 0.5;
         
         // Update boat position and rotation with wave effect
-        this.model.position.y = this.waterLevel - 0.5 + noiseValue * waveHeight;
+        this.model.position.y = this.waterLevel - 0.3 + noiseValue * waveHeight;
         this.model.rotation.x = noiseValue * 0.1;
         this.model.rotation.z = noiseValue * 0.1;
       }

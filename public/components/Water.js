@@ -37,7 +37,7 @@ export class Water {
       color: 0x0077be,
       transparent: true,
       opacity: 0.8,
-      metalness: 0.1,
+      metalness: 0.5,
       roughness: 0.3,
       side: THREE.DoubleSide
     });

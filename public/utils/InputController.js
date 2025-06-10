@@ -2,8 +2,8 @@
 export class InputController {
     constructor(game) {
       this.game = game;
-      this.left = 1.5708;
-      this.right = 4.71239;
+      this.left = 1.3708;
+      this.right = 4.91239;
       // Boat movement state
       this.boatMovement = {
         forward: false,
