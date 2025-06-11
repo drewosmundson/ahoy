@@ -3,7 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 import { Projectile } from './Projectile.js';
 
 export class Boat {
-  constructor(scene, waterLevel, socket, multiplayer = false, terrain = null) {
+  constructor(scene, waterLevel, socket = null, multiplayer = false, terrain = null) {
     this.scene = scene; 
     this.waterLevel = waterLevel;
     this.socket = socket;
@@ -28,7 +28,15 @@ export class Boat {
 
     // Create boat model
     this.model = this.createBoatModel();
-    this.setBoatPosition();
+    
+    // Only set random position for the main player boat
+    if (this.socket && this.terrain) {
+      this.setBoatPosition();
+    } else {
+      // For enemy boats, position will be set externally
+      this.model.position.set(0, this.waterLevel, 0);
+    }
+    
     this.scene.add(this.model);
 
     if (this.multiplayer && this.socket && !this.eventListenersAdded) {
@@ -90,6 +98,7 @@ export class Boat {
 
     return boat;
   }
+
   getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
@@ -99,13 +108,13 @@ export class Boat {
     let positionFound = false;
 
     for (let i = 0; i < maxIteration; i++) {
-      const x = this.getRandomNumber(0, 100);
-      const y = this.getRandomNumber(0, 100);
+      const x = this.getRandomNumber(-200, 200);
+      const z = this.getRandomNumber(-200, 200);
 
-      if (this.terrain.getHeightAt(x, y) < this.waterLevel - 2) {
-        this.model.position.set(x, this.waterLevel, y);
+      if (this.terrain.getHeightAt(x, z) < this.waterLevel - 2) {
+        this.model.position.set(x, this.waterLevel, z);
         positionFound = true;
-        break; // Exit loop early if position is valid
+        break;
       }
     }
 
@@ -116,14 +125,17 @@ export class Boat {
   }
 
   setupMultiplayerListeners() {
+    // Clean up existing listeners
     this.socket.off('playerUpdate');
     this.socket.off('enemyProjectileFired');
     
     this.socket.on('playerUpdate', (data) => {
+      console.log('Received playerUpdate:', data);
       this.updateEnemyBoatPosition(data);
     });
 
     this.socket.on('enemyProjectileFired', (data) => {
+      console.log('Received enemyProjectileFired:', data);
       this.handleEnemyProjectileFired(data);
     });
   }
@@ -168,11 +180,11 @@ export class Boat {
   }
 
   handleEnemyProjectileFired(data) {
-    console.log('Enemy projectile fired:', data);
+    console.log('Creating enemy projectile:', data);
     
     const enemyProjectile = new Projectile(
       this.scene, 
-      this.socket, 
+      null, // Enemy projectiles don't need socket
       this.waterLevel, 
       this.terrain, 
       data.position.x, 
@@ -198,11 +210,15 @@ export class Boat {
   updateEnemyBoatPosition(data) {
     const { playerId, position, rotation } = data;
 
+    // Don't update our own boat
     if (playerId === this.socket.id) return;
+
+    console.log(`Updating enemy boat ${playerId} to position:`, position, 'rotation:', rotation);
 
     const currentTime = Date.now();
 
     if (this.enemyBoats[playerId]) {
+      // Update existing enemy boat
       const enemyData = this.enemyBoats[playerId];
       const enemyBoat = enemyData.boat;
       
@@ -217,9 +233,21 @@ export class Boat {
       enemyData.lerpStartTime = currentTime;
       
     } else {
-      const enemyBoat = new Boat(this.scene, this.waterLevel);
+      // Create new enemy boat
+      console.log(`Creating new enemy boat for player ${playerId}`);
+      
+      const enemyBoat = new Boat(this.scene, this.waterLevel, null, false, null);
       enemyBoat.model.position.set(position.x, this.waterLevel, position.z);
       enemyBoat.model.rotation.y = rotation;
+      
+      // Make enemy boats visually distinct (different colored sail)
+      const sail = enemyBoat.model.children.find(child => 
+        child.material && child.material.color && child.material.color.getHex() === 0xFFFFFF
+      );
+      if (sail) {
+        sail.material = sail.material.clone();
+        sail.material.color.setHex(0xFF6B6B); // Red sail for enemy boats
+      }
       
       this.enemyBoats[playerId] = {
         boat: enemyBoat,
@@ -230,14 +258,21 @@ export class Boat {
         lerpStartTime: currentTime,
         lerpDuration: 100
       };
+      
+      console.log(`Enemy boat created for ${playerId}. Total enemy boats:`, Object.keys(this.enemyBoats).length);
     }
   }
 
   updateEnemyBoatInterpolation() {
     const currentTime = Date.now();
     
-    Object.values(this.enemyBoats).forEach(enemyData => {
+    Object.entries(this.enemyBoats).forEach(([playerId, enemyData]) => {
       const { boat, targetPos, targetRot, startPos, startRot, lerpStartTime, lerpDuration } = enemyData;
+      
+      if (!boat || !boat.model) {
+        console.warn(`Enemy boat for ${playerId} is missing model`);
+        return;
+      }
       
       const elapsed = currentTime - lerpStartTime;
       const factor = Math.min(elapsed / lerpDuration, 1.0);
@@ -269,9 +304,9 @@ export class Boat {
 
     const now = Date.now();
     const positionChanged = 
-      Math.abs(this.lastPosition.x - this.model.position.x) > 1 ||
-      Math.abs(this.lastPosition.z - this.model.position.z) > 1 ||
-      Math.abs(this.lastRotation - this.model.rotation.y) > 1;
+      Math.abs(this.lastPosition.x - this.model.position.x) > 0.5 ||
+      Math.abs(this.lastPosition.z - this.model.position.z) > 0.5 ||
+      Math.abs(this.lastRotation - this.model.rotation.y) > 0.1;
 
     if (positionChanged && (now - this.lastEmitTime) > this.emitInterval) {
       this.lastPosition.x = this.model.position.x;
@@ -362,7 +397,21 @@ export class Boat {
     this.emitPositionUpdate();
   }
 
+  // Method to remove a specific enemy boat (useful for when players disconnect)
+  removeEnemyBoat(playerId) {
+    if (this.enemyBoats[playerId]) {
+      const enemyData = this.enemyBoats[playerId];
+      if (enemyData.boat && enemyData.boat.model) {
+        this.scene.remove(enemyData.boat.model);
+        enemyData.boat.cleanup();
+      }
+      delete this.enemyBoats[playerId];
+      console.log(`Removed enemy boat for player ${playerId}`);
+    }
+  }
+
   cleanup() {
+    // Clean up own projectiles
     this.projectiles.forEach(projectile => {
       if (projectile.isProjectileActive()) {
         projectile.destroy();
@@ -370,6 +419,7 @@ export class Boat {
     });
     this.projectiles = [];
 
+    // Clean up enemy projectiles
     Object.keys(this.enemyProjectiles).forEach(playerId => {
       this.enemyProjectiles[playerId].forEach(projectile => {
         if (projectile.isProjectileActive()) {
@@ -379,6 +429,12 @@ export class Boat {
     });
     this.enemyProjectiles = {};
 
+    // Clean up enemy boats
+    Object.keys(this.enemyBoats).forEach(playerId => {
+      this.removeEnemyBoat(playerId);
+    });
+
+    // Remove socket listeners
     if (this.socket && this.eventListenersAdded) {
       this.socket.off('playerUpdate');
       this.socket.off('enemyProjectileFired');
