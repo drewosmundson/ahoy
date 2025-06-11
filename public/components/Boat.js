@@ -28,7 +28,7 @@ export class Boat {
 
     // Create boat model
     this.model = this.createBoatModel();
-    this.model.position.set(100, waterLevel, 100);
+    this.setBoatPosition();
     this.scene.add(this.model);
 
     if (this.multiplayer && this.socket && !this.eventListenersAdded) {
@@ -90,6 +90,30 @@ export class Boat {
 
     return boat;
   }
+  getRandomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  setBoatPosition() {
+    const maxIteration = 100;
+    let positionFound = false;
+
+    for (let i = 0; i < maxIteration; i++) {
+      const x = this.getRandomNumber(0, 100);
+      const y = this.getRandomNumber(0, 100);
+
+      if (this.terrain.getHeightAt(x, y) < this.waterLevel - 2) {
+        this.model.position.set(x, this.waterLevel, y);
+        positionFound = true;
+        break; // Exit loop early if position is valid
+      }
+    }
+
+    if (!positionFound) {
+      // fallback position if no suitable terrain was found
+      this.model.position.set(0, this.waterLevel, 0);
+    }
+  }
 
   setupMultiplayerListeners() {
     this.socket.off('playerUpdate');
@@ -121,7 +145,7 @@ export class Boat {
     
     projectile.setPositionAndRotation(
       this.model.position.x,
-      this.waterLevel + 2,
+      this.waterLevel + 1,
       this.model.position.z,
       this.model.rotation.y,
       sideOfBoat
@@ -133,7 +157,7 @@ export class Boat {
       this.socket.emit('projectileFired', {
         position: {
           x: this.model.position.x,
-          y: this.waterLevel + 2,
+          y: this.waterLevel + 1,
           z: this.model.position.z
         },
         rotation: this.model.rotation.y,

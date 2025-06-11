@@ -5,7 +5,7 @@ import { NoiseGenerator } from '../utils/NoiseGenerator.js';
 export class Terrain {
   constructor(scene, socket, multiplayer, heightmap, heightmapOverlay) {
     this.scene = scene;
-    this.mapSize = 512;
+    this.mapSize = 512; // 512
     this.lowPoly = true;
     this.terrainSize = 512;
     this.heightMultiply = 90;
@@ -21,30 +21,66 @@ export class Terrain {
     }
     this.mesh = this.createTerrainMesh();
     this.scene.add(this.mesh);
+    this.underMesh = this.createUnderMesh();
+    this.scene.add(this.underMesh);
   }
 
-  generateTerrain() {
-    const noise = new NoiseGenerator();
-    this.heightmap = noise.generateHeightmap(this.mapSize, {
-      scale: 0.015,
-      octaves: 4,
-      persistence: 0.5,
-      lacunarity: 2,
-      falloff: true,
-      falloffStrength: 4,
-      falloffScale: 0.9
+generateTerrain() {
+  const noise = new NoiseGenerator();
+  // Generate base terrain with mountain ring
+  this.heightmap = noise.generateHeightmap(this.mapSize, {
+    scale: 0.015,
+    octaves: 4,
+    persistence: 0.5,
+    lacunarity: 2,
+    falloff: true,           // Keep island falloff for center
+    falloffStrength: 4,
+    falloffScale: 0.9,
+    inversefalloffStrength: 3,
+    inversefalloffScale: 0.8,
+    inverseFalloff: false,
+
+    mountainBarrier: true,
+    barrierWidth: 0.2,        // Width of barrier as fraction of map size (0.15 = 15%)
+    barrierHeight: 0.4,        // Height of barrier (0-1)
+    barrierFalloff: 1,       // How sharply barrier falls off inward
+    barrierNoise: true,        // Add noise to barrier for natural look
+    barrierNoiseScale: 0.04    // Scale of noise applied to barrier
+  });
+
+  const overlay = new NoiseGenerator();
+  this.heightmapOverlay = overlay.generateHeightmap(this.mapSize, {
+    scale: 0.01,
+    octaves: 2,
+    persistence: 0.5,
+    lacunarity: 2,
+    falloff: false,
+    falloffStrength: 5,
+    falloffScale: 0.9,
+    inversefalloffStrength: 12,
+    inversefalloffScale: 10,
+    inverseFalloff: false,
+
+    mountainBarrier: true,
+    barrierWidth: 0.4,        // Width of barrier as fraction of map size (0.15 = 15%)
+    barrierHeight: 0.8,        // Height of barrier (0-1)
+    barrierFalloff: 2.0,       // How sharply barrier falls off inward
+    barrierNoise: true,        // Add noise to barrier for natural look
+    barrierNoiseScale: 0.04    // Scale of noise applied to barrier
+  });
+}
+
+  createUnderMesh() {
+    const size = this.mapSize ;
+    const segmentCount = this.lowPoly ? Math.floor(size / 4) : size - 1;
+    const geometry = new THREE.PlaneGeometry(this.terrainSize, this.terrainSize, segmentCount, segmentCount);
+    geometry.rotateX(-Math.PI / 2);
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x3d8c40,
     });
 
-    const overlay = new NoiseGenerator();
-    this.heightmapOverlay = overlay.generateHeightmap(this.mapSize, {
-      scale: 0.01,
-      octaves: 2,
-      persistence: 0.5,
-      lacunarity: 2,
-      falloff: false,
-      falloffStrength: 4,
-      falloffScale: 0.9
-    });
+    return new THREE.Mesh(geometry, material);
   }
 
   createTerrainMesh() {
@@ -62,12 +98,15 @@ export class Terrain {
       const y = this.lowPoly
         ? Math.floor(Math.floor(j / (segmentCount + 1)) * (size / segmentCount))
         : Math.floor(j / size);
+      
 
       if (x < size && y < size) {
         const baseHeight = this.heightmap[y][x];
         const overlay = this.heightmapOverlay[y][x];
-        const finalHeight = baseHeight * overlay * this.heightMultiply + (this.lowPoly ? 0.8 : 0);
-        vertices[i + 1] = finalHeight;
+        const finalHeight = baseHeight * overlay  * this.heightMultiply + (this.lowPoly ? 0.8 : 0);
+        vertices[i + 1] = finalHeight ;
+        
+
       }
     }
 

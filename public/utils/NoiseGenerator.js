@@ -1,5 +1,4 @@
-
-// NoiseGenerator.js - Utility for generating noise-based heightmaps
+// NoiseGenerator.js - Utility for generating noise-based heightmaps with mountain barrier
 import { SimplexNoise } from "./SimplexNoise.js"
 
 export class NoiseGenerator {
@@ -22,7 +21,17 @@ export class NoiseGenerator {
       lacunarity: 2,
       falloff: true,
       falloffStrength: 3,
-      falloffScale: 0.8
+      falloffScale: 0.8,
+      inversefalloffStrength: 3,
+      inversefalloffScale: 0.8,
+      inverseFalloff: false,
+      // Mountain barrier options
+      mountainBarrier: true,
+      barrierWidth: 0.15,        // Width of barrier as fraction of map size (0.15 = 15%)
+      barrierHeight: 0.9,        // Height of barrier (0-1)
+      barrierFalloff: 2.0,       // How sharply barrier falls off inward
+      barrierNoise: true,        // Add noise to barrier for natural look
+      barrierNoiseScale: 0.05    // Scale of noise applied to barrier
     };
 
     // Merge options with defaults
@@ -33,6 +42,10 @@ export class NoiseGenerator {
 
     // Generate falloff map if needed
     const falloffMap = config.falloff ? this.generateFalloffMap(size, config) : null;
+    const inverseFalloffMap = config.inverseFalloff ? this.generateInverseFalloffMap(size, config) : null;
+    
+    // Generate mountain barrier map
+    const barrierMap = config.mountainBarrier ? this.generateMountainBarrierMap(size, config) : null;
 
     // Generate noise values
     for (let y = 0; y < size; y++) {
@@ -66,6 +79,17 @@ export class NoiseGenerator {
           const falloffValue = falloffMap[y][x];
           value = Math.max(0, value - falloffValue);
         }
+        if (inverseFalloffMap) {
+          const inversefalloffValue = inverseFalloffMap[y][x];
+          value = Math.max(0, value - inversefalloffValue);
+        }
+
+        // Apply mountain barrier - this should be done AFTER other modifications
+        if (barrierMap) {
+          const barrierValue = barrierMap[y][x];
+          // Use max to ensure barrier always dominates in border areas
+          value = Math.max(value, barrierValue);
+        }
 
         // Store in heightmap
         heightmap[y][x] = value;
@@ -76,34 +100,83 @@ export class NoiseGenerator {
   }
 
   /**
-   * Generate a falloff map to create island effect
+   * Generate mountain barrier map for edges
    * @param {number} size - Size of the map
    * @param {Object} options - Generation options
-   * @returns {Array<Array<number>>} 2D array of falloff values (0-1)
+   * @returns {Array<Array<number>>} 2D array of barrier values (0-1)
    */
+  generateMountainBarrierMap(size, options = {}) {
+    const barrierMap = Array(size).fill().map(() => Array(size).fill(0));
+
+    const barrierWidth = options.barrierWidth || 0.15;
+    const barrierHeight = options.barrierHeight || 0.9;
+    const barrierFalloff = options.barrierFalloff || 2.0;
+    const addNoise = options.barrierNoise !== false;
+    const noiseScale = options.barrierNoiseScale || 0.05;
+
+    // Calculate barrier width in pixels
+    const borderPixels = Math.floor(size * barrierWidth);
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        // Calculate distance from nearest edge
+        const distFromLeft = x;
+        const distFromRight = size - 1 - x;
+        const distFromTop = y;
+        const distFromBottom = size - 1 - y;
+        
+        // Find minimum distance to any edge
+        const distFromEdge = Math.min(distFromLeft, distFromRight, distFromTop, distFromBottom);
+        
+        let barrierValue = 0;
+        
+        if (distFromEdge < borderPixels) {
+          // Calculate barrier strength (1 at edge, 0 at inner boundary)
+          const normalizedDist = distFromEdge / borderPixels; // 0 at edge, 1 at inner boundary
+          
+          // Apply falloff curve (higher values = sharper falloff)
+          const falloffValue = Math.pow(1 - normalizedDist, barrierFalloff);
+          
+          barrierValue = barrierHeight * falloffValue;
+          
+          // Add noise to make barrier look more natural
+          if (addNoise) {
+            const noiseValue = this.simplex.noise(x * noiseScale, y * noiseScale);
+            // Scale noise based on distance from edge (more noise at edge)
+            const noiseStrength = (1 - normalizedDist) * 0.3;
+            barrierValue += noiseValue * noiseStrength * barrierHeight;
+          }
+        }
+
+        // Ensure value is in valid range
+        barrierValue = Math.min(1, Math.max(0, barrierValue));
+        barrierMap[y][x] = barrierValue;
+      }
+    }
+
+    return barrierMap;
+  }
+
+
+  gernerateMountainScaleValues(size, options = {}) {
+    const mountainScaleMap = Array(size).fill().map(() => Array(size).fill(1));
+    return mountainScaleMap;
+  }
+
   generateFalloffMap(size, options = {}) {
     const falloffMap = Array(size).fill().map(() => Array(size).fill(0));
 
-    // Extract options
     const falloffStrength = options.falloffStrength || 3;
     const falloffScale = options.falloffScale || 0.8;
 
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
-        // Calculate normalized position from center (range -1 to 1)
         const nx = x / (size - 1) * 2 - 1; 
         const ny = y / (size - 1) * 2 - 1;
 
-        // Calculate distance from center (0,0)
         let distanceFromCenter = Math.max(Math.abs(nx), Math.abs(ny));
-
-        // Apply curve to create sharper falloff near edges
         let value = Math.pow(distanceFromCenter, falloffStrength);
-
-        // Scale falloff effect (0 = no effect, 1 = full effect)
         value *= falloffScale;
-
-        // Ensure value is in range [0,1]
         value = Math.min(1, Math.max(0, value));
 
         falloffMap[y][x] = value;
@@ -113,14 +186,29 @@ export class NoiseGenerator {
     return falloffMap;
   }
 
-  /**
-   * Generate noise for water waves
-   * @param {number} x - X coordinate
-   * @param {number} z - Z coordinate
-   * @param {number} time - Current time for animation
-   * @param {Object} options - Wave options
-   * @returns {number} Wave height value
-   */
+  generateInverseFalloffMap(size, options = {}) {
+    const inverseFalloffMap = Array(size).fill().map(() => Array(size).fill(0));
+
+    const inverseFalloffStrength = options.inversefalloffStrength || 3;
+    const inverseFalloffScale = options.inversefalloffScale || 0.8;
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const nx = x / (size - 1) * 2 - 1; 
+        const ny = y / (size - 1) * 2 - 1;
+
+        let distanceFromCenter = Math.max(Math.abs(nx), Math.abs(ny));
+        let value = Math.pow(distanceFromCenter, inverseFalloffStrength);
+        value *= inverseFalloffScale;
+        value = Math.min(2, Math.max(1, value));
+
+        inverseFalloffMap[y][x] = 1 - value;
+      }
+    }
+
+    return inverseFalloffMap;
+  }
+
   generateWaveNoise(x, z, time, options = {}) {
     const defaults = {
       frequency: 0.07,
@@ -130,7 +218,6 @@ export class NoiseGenerator {
 
     const config = { ...defaults, ...options };
 
-    // Calculate wave height using perlin noise that moves over time
     const noiseValue = this.simplex.noise(
       x * config.frequency + time * config.timeScale, 
       z * config.frequency + time * config.timeScale * 0.8
@@ -139,13 +226,6 @@ export class NoiseGenerator {
     return noiseValue * config.amplitude;
   }
 
-  /**
-   * Generate a combined noise value with multiple layers
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {Object} options - Generation options
-   * @returns {number} Combined noise value
-   */
   generateCombinedNoise(x, y, options = {}) {
     const defaults = {
       scale: 0.01,
@@ -161,7 +241,6 @@ export class NoiseGenerator {
     let frequency = 1;
     let maxValue = 0;
 
-    // Combine multiple octaves of noise
     for (let i = 0; i < config.octaves; i++) {
       const noiseValue = this.simplex.noise(
         x * config.scale * frequency,
@@ -175,16 +254,9 @@ export class NoiseGenerator {
       frequency *= config.lacunarity;
     }
 
-    // Normalize to [-1,1] range
     return value / maxValue;
   }
 
-  /**
-   * Generate random terrain features such as mountains or valleys
-   * @param {Array<Array<number>>} heightmap - Base heightmap to modify
-   * @param {Object} options - Feature options
-   * @returns {Array<Array<number>>} Modified heightmap
-   */
   addTerrainFeatures(heightmap, options = {}) {
     const size = heightmap.length;
     const defaults = {
@@ -197,48 +269,35 @@ export class NoiseGenerator {
     };
 
     const config = { ...defaults, ...options };
-
-    // Create a copy of the heightmap
     const result = heightmap.map(row => [...row]);
 
-    // Add random features
     for (let i = 0; i < config.featureCount; i++) {
-      // Random feature position
       const centerX = Math.floor(Math.random() * size);
       const centerY = Math.floor(Math.random() * size);
 
-      // Random feature properties
       const radius = config.minRadius + Math.random() * (config.maxRadius - config.minRadius);
       const height = config.minHeight + Math.random() * (config.maxHeight - config.minHeight);
-      const isMountain = Math.random() > 0.3; // 70% chance of mountain, 30% valley
+      const isMountain = Math.random() > 0.3;
 
-      // Apply feature to heightmap
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
-          // Calculate distance from feature center
           const dx = x - centerX;
           const dy = y - centerY;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          // Skip if outside radius
           if (distance > radius) continue;
 
-          // Calculate blend factor (1 at center, 0 at edge)
           const blend = Math.pow(1 - distance / radius, config.blendFactor);
 
-          // Apply height change
           if (isMountain) {
-            // Add height for mountains
             result[y][x] += height * blend;
           } else {
-            // Subtract height for valleys (but keep above 0)
             result[y][x] = Math.max(0, result[y][x] - height * blend);
           }
         }
       }
     }
 
-    // Ensure values are in range [0,1]
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         result[y][x] = Math.min(1, Math.max(0, result[y][x]));
@@ -248,20 +307,3 @@ export class NoiseGenerator {
     return result;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
