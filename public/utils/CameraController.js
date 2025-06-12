@@ -61,7 +61,11 @@ export class CameraController {
   requestPointerLock() {
     this.canvas.requestPointerLock();
   }
-
+addShake(intensity, duration) {
+  this.shakeIntensity = intensity;
+  this.shakeDuration = duration;
+  this.shakeStartTime = Date.now();
+}
   handleMouseMove(event) {
     if (!this.isPointerLocked) return;
 
@@ -158,6 +162,18 @@ export class CameraController {
     if (this.controls?.enabled && !this.isPointerLocked && this.cameraMode === 'free') {
       this.controls.update();
     }
+      if (this.shakeIntensity > 0) {
+    const elapsed = Date.now() - this.shakeStartTime;
+    if (elapsed < this.shakeDuration) {
+      const progress = elapsed / this.shakeDuration;
+      const currentIntensity = this.shakeIntensity * (1 - progress);
+      
+      this.camera.position.x += (Math.random() - 0.5) * currentIntensity;
+      this.camera.position.y += (Math.random() - 0.5) * currentIntensity;
+    } else {
+      this.shakeIntensity = 0;
+    }
+      }
   }
 
   cleanup() {

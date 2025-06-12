@@ -102,7 +102,46 @@ export class Boat {
   getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+// Add these methods to your Boat class:
 
+setHealth(newHealth) {
+  this.health = newHealth;
+  this.maxHealth = this.maxHealth || 100;
+}
+
+takeDamage(damage) {
+  this.health = Math.max(0, this.health - damage);
+  return this.health;
+}
+
+getPosition() {
+  return this.model ? this.model.position.clone() : new THREE.Vector3();
+}
+
+setEnemyMode(isEnemy) {
+  this.isEnemyBoat = isEnemy;
+  // You might want to change boat color or add name tags for enemies
+  if (isEnemy && this.model) {
+    // Change boat color to red for enemies
+    this.model.traverse((child) => {
+      if (child.material && child.material.color) {
+        child.material.color.setHex(0xFF4444);
+      }
+    });
+  }
+}
+
+setPosition(x, y, z) {
+  if (this.model) {
+    this.model.position.set(x, y, z);
+  }
+}
+
+setRotation(rotation) {
+  if (this.model) {
+    this.model.rotation.y = rotation;
+  }
+}
   setBoatPosition() {
     const maxIteration = 100;
     let positionFound = false;
@@ -152,7 +191,8 @@ export class Boat {
       this.waterLevel, 
       this.terrain, 
       this.model.position.x, 
-      this.model.position.z
+      this.model.position.z,
+      this.game // Pass game reference
     );
     
     projectile.setPositionAndRotation(

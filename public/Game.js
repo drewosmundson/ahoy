@@ -1,4 +1,4 @@
-// Game.js - Simplified core game orchestrator
+// Game.js - Core game orchestrator with enemy boat management
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 import { Terrain } from './components/Terrain.js';
@@ -8,6 +8,7 @@ import { Skybox } from './components/Skybox.js';
 import { InputController } from './utils/InputController.js';
 import { SoundManager } from './utils/SoundManager.js';
 import { CameraController } from './utils/CameraController.js';
+import { Projectile } from './components/Projectile.js';
 
 export class Game {
   constructor(canvas, socket, multiplayer, heightmap, heightmapOverlay) {
@@ -21,12 +22,22 @@ export class Game {
     this.heightmapOverlay = heightmapOverlay;
     
     this.lastTime = 0;
+    
+    // Enemy boat management
+    this.enemyBoats = new Map(); // Map of playerId -> boat instance
+    this.enemyProjectiles = new Map(); // Map of projectileId -> projectile instance
+    
+    // Player health
+    this.playerHealth = 100;
+    this.maxPlayerHealth = 100;
+    this.isAlive = true;
 
     this.initRenderer();
     this.initCamera();
     this.initSound();
     this.initLighting();
     this.initComponents();
+    this.initMultiplayerEvents();
 
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
@@ -53,6 +64,8 @@ export class Game {
     this.soundManager = new SoundManager(this.camera);
     this.soundManager.loadSoundEffect('mainTheme', 'resources/sounds/Lost_Sheep_Compressed.mp3');
     this.soundManager.loadSoundEffect('ambient', 'resources/sounds/waves.mp3');
+    this.soundManager.loadSoundEffect('hit', 'resources/sounds/explosion.mp3');
+    this.soundManager.loadSoundEffect('death', 'resources/sounds/death.mp3');
     this.playBackgroundMusic();
   }
 
@@ -73,9 +86,237 @@ export class Game {
     this.input = new InputController(this);
   }
 
+  initMultiplayerEvents() {
+    if (!this.socket) return;
+
+    // Handle enemy boat movements
+    this.socket.on('enemyBoatMovement', (data) => {
+      this.updateEnemyBoat(data);
+    });
+
+    // Handle enemy projectiles
+    this.socket.on('enemyProjectileFired', (data) => {
+      this.createEnemyProjectile(data);
+    });
+
+    // Handle player hits
+    this.socket.on('playerHit', (data) => {
+      this.handlePlayerHit(data);
+    });
+
+    // Handle player deaths
+    this.socket.on('playerKilled', (data) => {
+      this.handlePlayerKilled(data);
+    });
+
+    // Handle player healing
+    this.socket.on('playerHealed', (data) => {
+      this.handlePlayerHealed(data);
+    });
+
+    // Handle game over
+    this.socket.on('gameOver', (data) => {
+      this.handleGameOver(data);
+    });
+  }
+
+  updateEnemyBoat(data) {
+    const { playerId, position, rotation } = data;
+    
+    if (!this.enemyBoats.has(playerId)) {
+      // Create new enemy boat
+      const enemyBoat = new Boat(this.scene, this.waterLevel, null, false, this.terrain);
+      enemyBoat.setEnemyMode(true); // Set as enemy boat
+      this.enemyBoats.set(playerId, enemyBoat);
+    }
+    
+    const enemyBoat = this.enemyBoats.get(playerId);
+    enemyBoat.setPosition(position.x, position.y, position.z);
+    enemyBoat.setRotation(rotation);
+  }
+
+  createEnemyProjectile(data) {
+    const { playerId, position, rotation, sideOfBoat, timestamp } = data;
+    
+    // Create enemy projectile
+    const projectile = new Projectile(
+      this.scene, 
+      null, // No socket for enemy projectiles
+      this.waterLevel, 
+      this.terrain, 
+      position.x, 
+      position.z,
+      this
+    );
+    
+    projectile.setPositionAndRotation(position.x, position.y, position.z, rotation, sideOfBoat);
+    
+    // Store projectile with unique ID
+    const projectileId = `${playerId}_${timestamp}`;
+    this.enemyProjectiles.set(projectileId, projectile);
+    
+    console.log(`Enemy projectile created from player ${playerId}`);
+  }
+
+  handlePlayerHit(data) {
+    const { attackerPlayerId, targetPlayerId, damage, newHealth, hitPosition } = data;
+    
+    // Update local health if we were hit
+    if (targetPlayerId === this.socket.id) {
+      this.playerHealth = newHealth;
+      this.showDamageIndicator(damage);
+      this.playSoundEffect('hit', 0.5);
+      
+      // Screen shake effect
+      this.cameraController.addShake(0.5, 300);
+    }
+    
+    // Update enemy boat health if they were hit
+    if (this.enemyBoats.has(targetPlayerId)) {
+      const enemyBoat = this.enemyBoats.get(targetPlayerId);
+      enemyBoat.setHealth(newHealth);
+    }
+    
+    // Create hit effect at impact location
+    this.createHitEffect(hitPosition);
+    
+    console.log(`Player ${targetPlayerId} hit by ${attackerPlayerId} for ${damage} damage`);
+  }
+
+  handlePlayerKilled(data) {
+    const { killedPlayerId, killerPlayerId } = data;
+    
+    if (killedPlayerId === this.socket.id) {
+      // Local player was killed
+      this.isAlive = false;
+      this.playerHealth = 0;
+      this.showDeathScreen();
+      this.playSoundEffect('death', 0.7);
+    }
+    
+    // Remove enemy boat if they were killed
+    if (this.enemyBoats.has(killedPlayerId)) {
+      const enemyBoat = this.enemyBoats.get(killedPlayerId);
+      enemyBoat.destroy();
+      this.enemyBoats.delete(killedPlayerId);
+    }
+    
+    console.log(`Player ${killedPlayerId} was killed by ${killerPlayerId}`);
+  }
+
+  handlePlayerHealed(data) {
+    const { playerId, healAmount, newHealth } = data;
+    
+    if (playerId === this.socket.id) {
+      this.playerHealth = newHealth;
+      this.showHealIndicator(healAmount);
+    }
+    
+    if (this.enemyBoats.has(playerId)) {
+      const enemyBoat = this.enemyBoats.get(playerId);
+      enemyBoat.setHealth(newHealth);
+    }
+  }
+
+  handleGameOver(data) {
+    const { winner } = data;
+    
+    if (winner && winner.id === this.socket.id) {
+      this.showVictoryScreen();
+    } else {
+      this.showDefeatScreen();
+    }
+  }
+
+  createHitEffect(position) {
+    // Create explosion effect at hit location
+    const explosionGeometry = new THREE.SphereGeometry(2, 12, 12);
+    const explosionMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xFF4500,
+      transparent: true,
+      opacity: 0.8
+    });
+    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+    explosion.position.set(position.x, position.y, position.z);
+    
+    this.scene.add(explosion);
+    
+    // Animate explosion
+    const startTime = Date.now();
+    const duration = 600;
+    
+    const animateExplosion = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / duration;
+      
+      if (progress >= 1) {
+        this.scene.remove(explosion);
+        explosion.geometry.dispose();
+        explosion.material.dispose();
+        return;
+      }
+      
+      const scale = 1 + progress * 3;
+      explosion.scale.set(scale, scale, scale);
+      explosion.material.opacity = 0.8 * (1 - progress);
+      
+      requestAnimationFrame(animateExplosion);
+    };
+    
+    animateExplosion();
+  }
+
+  showDamageIndicator(damage) {
+    // Create red screen flash effect
+    const damageOverlay = document.createElement('div');
+    damageOverlay.style.position = 'fixed';
+    damageOverlay.style.top = '0';
+    damageOverlay.style.left = '0';
+    damageOverlay.style.width = '100%';
+    damageOverlay.style.height = '100%';
+    damageOverlay.style.background = 'rgba(255, 0, 0, 0.3)';
+    damageOverlay.style.pointerEvents = 'none';
+    damageOverlay.style.zIndex = '1000';
+    
+    document.body.appendChild(damageOverlay);
+    
+    // Fade out damage indicator
+    setTimeout(() => {
+      damageOverlay.style.transition = 'opacity 0.5s';
+      damageOverlay.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(damageOverlay);
+      }, 500);
+    }, 100);
+    
+    // Show damage text
+    console.log(`Took ${damage} damage! Health: ${this.playerHealth}`);
+  }
+
+  showHealIndicator(healAmount) {
+    console.log(`Healed ${healAmount} health! Health: ${this.playerHealth}`);
+  }
+
+  showDeathScreen() {
+    console.log('You have been defeated!');
+    // TODO: Implement death screen UI
+  }
+
+  showVictoryScreen() {
+    console.log('Victory! You are the last boat standing!');
+    // TODO: Implement victory screen UI
+  }
+
+  showDefeatScreen() {
+    console.log('Game Over! Another player won.');
+    // TODO: Implement defeat screen UI
+  }
+
   // Simplified methods that delegate to other classes
   fireProjectile(sideOfBoat) {
-    this.boat.fireProjectile(sideOfBoat);
+    if (this.isAlive) {
+      this.boat.fireProjectile(sideOfBoat);
+    }
   }
 
   toggleFog() {
@@ -141,7 +382,24 @@ export class Game {
 
     // Update all components
     this.water?.update(time);
-    this.boat?.update(time, this.input.boatMovement, deltaTime);
+    
+    if (this.isAlive) {
+      this.boat?.update(time, this.input.boatMovement, deltaTime);
+    }
+    
+    // Update enemy boats
+    for (const [playerId, enemyBoat] of this.enemyBoats) {
+      enemyBoat.update(time, null, deltaTime);
+    }
+    
+    // Update enemy projectiles
+    for (const [projectileId, projectile] of this.enemyProjectiles) {
+      if (!projectile.update(deltaTime)) {
+        // Projectile is destroyed, remove it
+        this.enemyProjectiles.delete(projectileId);
+      }
+    }
+    
     this.cameraController?.update(this.boat);
   }
 
@@ -165,6 +423,18 @@ export class Game {
   cleanup() {
     this.boat?.cleanup();
     this.cameraController?.cleanup();
+    
+    // Cleanup enemy boats
+    for (const [playerId, enemyBoat] of this.enemyBoats) {
+      enemyBoat.cleanup();
+    }
+    this.enemyBoats.clear();
+    
+    // Cleanup enemy projectiles
+    for (const [projectileId, projectile] of this.enemyProjectiles) {
+      projectile.destroy();
+    }
+    this.enemyProjectiles.clear();
 
     if (this.scene) {
       this.scene.traverse((object) => {

@@ -45,7 +45,10 @@ io.on("connection", (socket) => {
       players: [{
         id: socket.id,
         name: `Player ${socket.id.substr(0, 4)}`,
-        isHost: true
+        isHost: true,
+        health: 100,
+        maxHealth: 100,
+        alive: true
       }],
       settings: {
         gameMode: "noBots",
@@ -76,7 +79,10 @@ io.on("connection", (socket) => {
       const playerData = {
         id: socket.id,
         name: `Player ${socket.id.substr(0, 4)}`,
-        isHost: false
+        isHost: false,
+        health: 100,
+        maxHealth: 100,
+        alive: true
       };
 
       lobbies[lobbyId].players.push(playerData);
@@ -202,6 +208,86 @@ io.on("connection", (socket) => {
         });
         console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
       }
+  });
+
+  // Handle projectile hits
+  socket.on('projectileHit', (data) => {
+    if (currentLobby && lobbies[currentLobby]) {
+      const { hitType, targetPlayerId, damage, hitPosition, timestamp } = data;
+      
+      console.log(`Projectile hit detected: ${socket.id} hit ${targetPlayerId} for ${damage} damage`);
+      
+      // Find the target player and apply damage
+      const targetPlayer = lobbies[currentLobby].players.find(p => p.id === targetPlayerId);
+      
+      if (targetPlayer) {
+        // Apply damage
+        targetPlayer.health = Math.max(0, targetPlayer.health - damage);
+        
+        // Check if player is killed
+        if (targetPlayer.health <= 0) {
+          targetPlayer.alive = false;
+          console.log(`Player ${targetPlayerId} was killed by ${socket.id}`);
+          
+          // Broadcast player death
+          io.to(currentLobby).emit('playerKilled', {
+            killedPlayerId: targetPlayerId,
+            killerPlayerId: socket.id,
+            timestamp: timestamp
+          });
+        }
+        
+        // Broadcast hit information to all players in lobby
+        io.to(currentLobby).emit('playerHit', {
+          attackerPlayerId: socket.id,
+          targetPlayerId: targetPlayerId,
+          damage: damage,
+          newHealth: targetPlayer.health,
+          hitPosition: hitPosition,
+          timestamp: timestamp
+        });
+        
+        // Update lobby player list
+        io.to(currentLobby).emit("lobbyUpdated", {
+          players: lobbies[currentLobby].players
+        });
+        
+        // Check for game end conditions
+        const alivePlayers = lobbies[currentLobby].players.filter(p => p.alive);
+        if (alivePlayers.length <= 1) {
+          // Game over - last player standing wins
+          io.to(currentLobby).emit('gameOver', {
+            winner: alivePlayers.length === 1 ? alivePlayers[0] : null,
+            timestamp: Date.now()
+          });
+        }
+      }
+    }
+  });
+
+  // Handle player healing/repair (optional)
+  socket.on('playerHeal', (data) => {
+    if (currentLobby && lobbies[currentLobby]) {
+      const { healAmount } = data;
+      const player = lobbies[currentLobby].players.find(p => p.id === socket.id);
+      
+      if (player && player.alive) {
+        player.health = Math.min(player.maxHealth, player.health + healAmount);
+        
+        // Broadcast healing to all players
+        io.to(currentLobby).emit('playerHealed', {
+          playerId: socket.id,
+          healAmount: healAmount,
+          newHealth: player.health,
+          timestamp: Date.now()
+        });
+        
+        // Update lobby player list
+        io.to(currentLobby).emit("lobbyUpdated", {
+          players: lobbies[currentLobby].players
+        });
+      }
+    }
   });
 
   // Optional: Handle projectile impacts/explosions
