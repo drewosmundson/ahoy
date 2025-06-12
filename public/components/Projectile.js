@@ -10,7 +10,7 @@ export class Projectile {
     
     // Physics properties
     this.initialSpeed = 25; // Initial launch speed
-    this.launchAngle = Math.PI / 8; // 30 degrees launch angle
+    this.launchAngle = Math.PI / 9; // 30 degrees launch angle
     this.gravity = 9.8; // Gravity acceleration
     
     // Velocity components
@@ -62,7 +62,7 @@ export class Projectile {
     this.model.position.set(x, y, z);
     
     // Store launch direction for physics calculations
-    this.launchDirection = rotation + sideOfBoat;
+    this.launchDirection = rotation + sideOfBoat
     
     // Calculate initial velocity components
     this.velocityX = Math.sin(this.launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);

@@ -67,13 +67,13 @@ export class Boat {
     const cannonMaterial = new THREE.MeshStandardMaterial({ color: 0x000420 });
     
     const cannonLeft = new THREE.Mesh(cannonGeometry, cannonMaterial);
-    cannonLeft.position.set(1.5, 1, 1);
+    cannonLeft.position.set(1.5, 1, 0);
     cannonLeft.rotation.z = Math.PI / 2;
     cannonLeft.rotation.z = 5;
     boat.add(cannonLeft);
     
     const cannonRight = new THREE.Mesh(cannonGeometry, cannonMaterial);
-    cannonRight.position.set(-1.5, 1, 1);
+    cannonRight.position.set(-1.5, 1, 0);
     cannonRight.rotation.z = Math.PI / 2;
     cannonRight.rotation.z = -5;
     boat.add(cannonRight);
@@ -157,7 +157,7 @@ export class Boat {
     
     projectile.setPositionAndRotation(
       this.model.position.x,
-      this.waterLevel + 1,
+      this.waterLevel,
       this.model.position.z,
       this.model.rotation.y,
       sideOfBoat
@@ -169,7 +169,7 @@ export class Boat {
       this.socket.emit('projectileFired', {
         position: {
           x: this.model.position.x,
-          y: this.waterLevel + 1,
+          y: this.waterLevel,
           z: this.model.position.z
         },
         rotation: this.model.rotation.y,

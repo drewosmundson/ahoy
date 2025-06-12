@@ -16,7 +16,13 @@ export class HeightmapGenerator {
       lacunarity: 2,
       falloff: true,
       falloffStrength: 4,
-      falloffScale: 0.9
+      falloffScale: 0.9,
+
+      barrierWidth: 0.1,        // Width of barrier as fraction of map size (0.15 = 15%)
+      barrierHeight: 0.6,        // Height of barrier (0-1)
+      barrierFalloff: 0.5,       // How sharply barrier falls off inward
+      barrierNoise: true,        // Add noise to barrier for natural look
+      barrierNoiseScale: 0.04    // Scale of noise applied to barrier
     });
 
     const overlay = new NoiseGenerator();
@@ -27,7 +33,14 @@ export class HeightmapGenerator {
       lacunarity: 2,
       falloff: false,
       falloffStrength: 4,
-      falloffScale: 0.9
+      falloffScale: 0.9,
+
+      mountainBarrier: true,
+      barrierWidth: 0.4,        // Width of barrier as fraction of map size (0.15 = 15%)
+      barrierHeight: 0.9,        // Height of barrier (0-1)
+      barrierFalloff: 2.0,       // How sharply barrier falls off inward
+      barrierNoise: true,        // Add noise to barrier for natural look
+      barrierNoiseScale: 0.04    // Scale of noise applied to barrier
     });
   }
 }
