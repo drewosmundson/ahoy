@@ -1,6 +1,5 @@
-// Boat.js - Enhanced boat with multiplayer and projectile management
+// Boat.js - Simplified boat class without projectile management
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
-import { Projectile } from './Projectile.js';
 
 export class Boat {
   constructor(scene, waterLevel, socket = null, multiplayer = false, terrain = null) {
@@ -13,32 +12,35 @@ export class Boat {
     // Movement properties
     this.speed = 0.2;
     this.rotationSpeed = 0.03;
-
-    // Projectile management
-    this.projectiles = [];
+    
+    // Health properties
+    this.health = 100;
+    this.maxHealth = 100;
     
     // Multiplayer properties
     this.enemyBoats = {};
-    this.enemyProjectiles = {};
     this.lastEmitTime = 0;
     this.emitInterval = 50;
     this.lastPosition = { x: 0, z: 0 };
     this.lastRotation = 0;
     this.eventListenersAdded = false;
-
+    
+    // Enemy boat flag
+    this.isEnemyBoat = false;
+    
     // Create boat model
     this.model = this.createBoatModel();
     
     // Only set random position for the main player boat
     if (this.socket && this.terrain) {
-      this.setBoatPosition();
+      this.setRandomPosition();
     } else {
       // For enemy boats, position will be set externally
       this.model.position.set(0, this.waterLevel, 0);
     }
     
     this.scene.add(this.model);
-
+    
     if (this.multiplayer && this.socket && !this.eventListenersAdded) {
       this.setupMultiplayerListeners();
       this.eventListenersAdded = true;
@@ -61,7 +63,7 @@ export class Boat {
     const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
     cabin.position.set(0, 1, -1.5);
     boat.add(cabin);
-
+    
     // Create cannons
     const cannonGeometry = new THREE.CylinderGeometry(0.4, 0.4, 2, 8);
     const cannonMaterial = new THREE.MeshStandardMaterial({ color: 0x000420 });
@@ -95,68 +97,69 @@ export class Boat {
     sail.rotation.y = Math.PI;
     sail.position.set(0, 3, 0);
     boat.add(sail);
-
+    
     return boat;
   }
 
   getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-// Add these methods to your Boat class:
 
-setHealth(newHealth) {
-  this.health = newHealth;
-  this.maxHealth = this.maxHealth || 100;
-}
-
-takeDamage(damage) {
-  this.health = Math.max(0, this.health - damage);
-  return this.health;
-}
-
-getPosition() {
-  return this.model ? this.model.position.clone() : new THREE.Vector3();
-}
-
-setEnemyMode(isEnemy) {
-  this.isEnemyBoat = isEnemy;
-  // You might want to change boat color or add name tags for enemies
-  if (isEnemy && this.model) {
-    // Change boat color to red for enemies
-    this.model.traverse((child) => {
-      if (child.material && child.material.color) {
-        child.material.color.setHex(0xFF4444);
-      }
-    });
+  getPosition() {
+    return this.model ? this.model.position.clone() : new THREE.Vector3();
   }
-}
 
-setPosition(x, y, z) {
-  if (this.model) {
-    this.model.position.set(x, y, z);
+  getRotation() {
+    return this.model ? this.model.rotation.y : 0;
   }
-}
 
-setRotation(rotation) {
-  if (this.model) {
-    this.model.rotation.y = rotation;
+  setEnemyMode(isEnemy) {
+    this.isEnemyBoat = isEnemy;
+    if (isEnemy && this.model) {
+      // Change boat color to red for enemies
+      this.model.traverse((child) => {
+        if (child.material && child.material.color) {
+          child.material.color.setHex(0xFF4444);
+        }
+      });
+    }
   }
-}
-  setBoatPosition() {
+
+  setPosition(x, y, z) {
+    if (this.model) {
+      this.model.position.set(x, y, z);
+    }
+  }
+
+  setRotation(rotation) {
+    if (this.model) {
+      this.model.rotation.y = rotation;
+    }
+  }
+
+  setHealth(newHealth) {
+    this.health = Math.max(0, Math.min(this.maxHealth, newHealth));
+  }
+
+  getHealth() {
+    return this.health;
+  }
+
+  setRandomPosition() {
     const maxIteration = 100;
     let positionFound = false;
-
+    
     for (let i = 0; i < maxIteration; i++) {
       const x = this.getRandomNumber(-200, 200);
       const z = this.getRandomNumber(-200, 200);
-
+      
       if (this.terrain.getHeightAt(x, z) < this.waterLevel - 2) {
         this.model.position.set(x, this.waterLevel, z);
         positionFound = true;
         break;
       }
     }
-
+    
     if (!positionFound) {
       // fallback position if no suitable terrain was found
       this.model.position.set(0, this.waterLevel, 0);
@@ -166,97 +169,23 @@ setRotation(rotation) {
   setupMultiplayerListeners() {
     // Clean up existing listeners
     this.socket.off('playerUpdate');
-    this.socket.off('enemyProjectileFired');
     
     this.socket.on('playerUpdate', (data) => {
       console.log('Received playerUpdate:', data);
       this.updateEnemyBoatPosition(data);
     });
-
-    this.socket.on('enemyProjectileFired', (data) => {
-      console.log('Received enemyProjectileFired:', data);
-      this.handleEnemyProjectileFired(data);
-    });
-  }
-
-  fireProjectile(sideOfBoat) {
-    if (!this.socket) {
-      console.warn('Socket not initialized, cannot fire projectile');
-      return;
-    }
-
-    const projectile = new Projectile(
-      this.scene, 
-      this.socket, 
-      this.waterLevel, 
-      this.terrain, 
-      this.model.position.x, 
-      this.model.position.z,
-      this.game // Pass game reference
-    );
-    
-    projectile.setPositionAndRotation(
-      this.model.position.x,
-      this.waterLevel,
-      this.model.position.z,
-      this.model.rotation.y,
-      sideOfBoat
-    );
-
-    this.projectiles.push(projectile);
-
-    if (this.multiplayer) {
-      this.socket.emit('projectileFired', {
-        position: {
-          x: this.model.position.x,
-          y: this.waterLevel,
-          z: this.model.position.z
-        },
-        rotation: this.model.rotation.y,
-        timestamp: Date.now(),
-        sideOfBoat
-      });
-    }
-  }
-
-  handleEnemyProjectileFired(data) {
-    console.log('Creating enemy projectile:', data);
-    
-    const enemyProjectile = new Projectile(
-      this.scene, 
-      null, // Enemy projectiles don't need socket
-      this.waterLevel, 
-      this.terrain, 
-      data.position.x, 
-      data.position.z
-    );
-    
-    enemyProjectile.setPositionAndRotation(
-      data.position.x,
-      data.position.y,
-      data.position.z,
-      data.rotation,
-      data.sideOfBoat
-    );
-
-    this.projectiles.push(enemyProjectile);
-    
-    if (!this.enemyProjectiles[data.playerId]) {
-      this.enemyProjectiles[data.playerId] = [];
-    }
-    this.enemyProjectiles[data.playerId].push(enemyProjectile);
   }
 
   updateEnemyBoatPosition(data) {
     const { playerId, position, rotation } = data;
-
+    
     // Don't update our own boat
     if (playerId === this.socket.id) return;
-
+    
     console.log(`Updating enemy boat ${playerId} to position:`, position, 'rotation:', rotation);
-
+    
     const currentTime = Date.now();
-
+    
     if (this.enemyBoats[playerId]) {
       // Update existing enemy boat
       const enemyData = this.enemyBoats[playerId];
@@ -327,21 +256,9 @@ setRotation(rotation) {
     });
   }
 
-  updateProjectiles(deltaTime) {
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      const projectile = this.projectiles[i];
-      
-      const stillActive = projectile.update(deltaTime);
-      
-      if (!stillActive || !projectile.isProjectileActive()) {
-        this.projectiles.splice(i, 1);
-      }
-    }
-  }
-
   emitPositionUpdate() {
     if (!this.multiplayer || !this.socket) return;
-
+    
     const now = Date.now();
     const positionChanged = 
       Math.abs(this.lastPosition.x - this.model.position.x) > 0.5 ||
@@ -391,33 +308,40 @@ setRotation(rotation) {
     let deltaX = 0;
     let deltaZ = 0;
     
-    if (movement.forward) {
-      deltaX += Math.sin(rotation) * this.speed;
-      deltaZ += Math.cos(rotation) * this.speed;
-    }
-    if (movement.backward) {
-      deltaX -= Math.sin(rotation) * this.speed * 0.5;
-      deltaZ -= Math.cos(rotation) * this.speed * 0.5;
+    // Handle movement input
+    if (movement) {
+      if (movement.forward) {
+        deltaX += Math.sin(rotation) * this.speed;
+        deltaZ += Math.cos(rotation) * this.speed;
+      }
+      if (movement.backward) {
+        deltaX -= Math.sin(rotation) * this.speed * 0.5;
+        deltaZ -= Math.cos(rotation) * this.speed * 0.5;
+      }
+      
+      if (movement.left) {
+        this.model.rotation.y += this.rotationSpeed;
+      }
+      if (movement.right) {
+        this.model.rotation.y -= this.rotationSpeed;
+      }
     }
     
-    if (movement.left) {
-      this.model.rotation.y += this.rotationSpeed;
-    }
-    if (movement.right) {
-      this.model.rotation.y -= this.rotationSpeed;
-    }
-    
+    // Calculate new position
     const newX = position.x + deltaX;
     const newZ = position.z + deltaZ;
 
+    // Check map boundaries
     const mapBounds = 450;
     if (Math.abs(newX) < mapBounds && Math.abs(newZ) < mapBounds) {
+      // Check terrain collision
       const terrainHeight = this.terrain ? this.terrain.getHeightAt(newX, newZ) : -999;
 
       if (terrainHeight < this.waterLevel) {
         position.x = newX;
         position.z = newZ;
         
+        // Apply wave animation
         const waveHeight = 0.7;
         const waveFrequency = 0.09;
         const timeScale = time * 0.001;
@@ -431,8 +355,7 @@ setRotation(rotation) {
       }
     }
 
-    // Update projectiles and multiplayer components
-    this.updateProjectiles(deltaTime);
+    // Update multiplayer components
     this.updateEnemyBoatInterpolation();
     this.emitPositionUpdate();
   }
@@ -450,25 +373,30 @@ setRotation(rotation) {
     }
   }
 
-  cleanup() {
-    // Clean up own projectiles
-    this.projectiles.forEach(projectile => {
-      if (projectile.isProjectileActive()) {
-        projectile.destroy();
-      }
-    });
-    this.projectiles = [];
-
-    // Clean up enemy projectiles
-    Object.keys(this.enemyProjectiles).forEach(playerId => {
-      this.enemyProjectiles[playerId].forEach(projectile => {
-        if (projectile.isProjectileActive()) {
-          projectile.destroy();
+  // Method to destroy this boat instance
+  destroy() {
+    if (this.model) {
+      this.scene.remove(this.model);
+      
+      // Dispose of geometries and materials
+      this.model.traverse((child) => {
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(material => material.dispose());
+          } else {
+            child.material.dispose();
+          }
         }
       });
-    });
-    this.enemyProjectiles = {};
+      
+      this.model = null;
+    }
+  }
 
+  cleanup() {
     // Clean up enemy boats
     Object.keys(this.enemyBoats).forEach(playerId => {
       this.removeEnemyBoat(playerId);
@@ -477,8 +405,10 @@ setRotation(rotation) {
     // Remove socket listeners
     if (this.socket && this.eventListenersAdded) {
       this.socket.off('playerUpdate');
-      this.socket.off('enemyProjectileFired');
       this.eventListenersAdded = false;
     }
+
+    // Destroy the boat model
+    this.destroy();
   }
 }

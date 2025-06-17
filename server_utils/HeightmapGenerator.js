@@ -1,4 +1,4 @@
-import { NoiseGenerator } from "./public/utils/NoiseGenerator.js";
+import { NoiseGenerator } from "../public/utils/NoiseGenerator.js";
 // the intnedtion of this class is that all charectors get the same heightmap
 export class HeightmapGenerator {
   constructor(){

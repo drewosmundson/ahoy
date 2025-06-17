@@ -24,7 +24,6 @@
         <button id="singlePlayerMenuButton">Single Player</button>
         <button id="joinLobbyMenuButton">Join Lobby</button> 
         <button id="createLobbyMenuButton">Create Lobby</button>
-        <button id="joinMMOButton">Join MMO</button>
       </div>
 
       <!-- Single Player Menu -->
@@ -78,11 +77,21 @@
           <ul id="playerListItems"></ul>
         </div>
         <button id="leaveLobbyButton">Leave Lobby</button>
-
-
-
         <div id="watingForHost">
           <h2>Waiting for host to start the game...</h2>
+        </div>
+      </div>
+
+      <div id="participantLobbyGameStartedScreen" class="section hidden">
+        <div id="lobbyInfo">
+          <p>Lobby Code: <span id="lobbyCodeDisplay"></span></p>
+        </div>
+        <div id="playerList">
+          <h3>Players:</h3>
+          <ul id="playerListItems"></ul>
+        </div>
+        <button id="leaveLobbyButton">Leave Lobby</button>
+        <button id="joinStartedGame">Join Game</button>
         </div>
       </div>
 
