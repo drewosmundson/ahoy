@@ -27,7 +27,6 @@ export class Game {
     
     // Centralized projectile management
     this.projectiles = []; // Player's own projectiles
-    this.enemyProjectiles = new Map(); // Map of projectileId -> projectile instance
     
     // Player health
     this.playerHealth = 100;
@@ -150,20 +149,12 @@ export class Game {
       rotation,
       sideOfBoat
     );
-    
-    
-    // Store projectile with unique ID
-    const projectileId = `${playerId}_${timestamp}`;
-    this.enemyProjectiles.set(projectileId, projectile);
     this.projectiles.push(projectile);
-    
-    console.log(`Enemy projectile created from player ${playerId}`);
   }
 
   // Centralized projectile firing method
   fireProjectile(sideOfBoat) {
     if (!this.isAlive || !this.socket) {
-      console.warn('Cannot fire projectile: player not alive or socket not initialized');
       return;
     }
 
@@ -176,17 +167,11 @@ export class Game {
       this.waterLevel, 
       this.terrain, 
       boatPosition.x, 
-      boatPosition.z
-    );
-    
-    projectile.setPositionAndRotation(
-      boatPosition.x,
-      this.waterLevel,
       boatPosition.z,
       boatRotation,
       sideOfBoat
     );
-
+    
     // Add to player projectiles array
     this.projectiles.push(projectile);
 
@@ -204,8 +189,6 @@ export class Game {
         ownerId: this.socket.id
       });
     }
-
-    console.log('Player projectile fired');
   }
 
   // Update all projectiles
@@ -219,13 +202,8 @@ export class Game {
       }
     }
 
-    // Update enemy projectiles
-    for (const [projectileId, projectile] of this.enemyProjectiles) {
-      if (!projectile.update(deltaTime) || !projectile.isProjectileActive()) {
-        // Projectile is destroyed, remove it
-        this.enemyProjectiles.delete(projectileId);
-      }
-    }
+
+  
   }
 
 
@@ -270,32 +248,7 @@ export class Game {
     animateExplosion();
   }
 
-  showDamageIndicator(damage) {
-    // Create red screen flash effect
-    const damageOverlay = document.createElement('div');
-    damageOverlay.style.position = 'fixed';
-    damageOverlay.style.top = '0';
-    damageOverlay.style.left = '0';
-    damageOverlay.style.width = '100%';
-    damageOverlay.style.height = '100%';
-    damageOverlay.style.background = 'rgba(255, 0, 0, 0.3)';
-    damageOverlay.style.pointerEvents = 'none';
-    damageOverlay.style.zIndex = '1000';
-    
-    document.body.appendChild(damageOverlay);
-    
-    // Fade out damage indicator
-    setTimeout(() => {
-      damageOverlay.style.transition = 'opacity 0.5s';
-      damageOverlay.style.opacity = '0';
-      setTimeout(() => {
-        document.body.removeChild(damageOverlay);
-      }, 500);
-    }, 100);
-    
-    // Show damage text
-    console.log(`Took ${damage} damage! Health: ${this.playerHealth}`);
-  }
+
 
   toggleFog() {
     if (this.scene.fog) {
@@ -374,13 +327,9 @@ export class Game {
     this.cameraController?.update(this.boat);
   }
 
-  render() {
-    this.renderer.render(this.scene, this.camera);
-  }
-
   animate = (time) => {
     this.update(time);
-    this.render();
+    this.renderer.render(this.scene, this.camera);
   }
 
   start() {
@@ -409,11 +358,6 @@ export class Game {
     });
     this.projectiles = [];
     
-    for (const [projectileId, projectile] of this.enemyProjectiles) {
-      projectile.destroy();
-    }
-    this.enemyProjectiles.clear();
-
     if (this.scene) {
       this.scene.traverse((object) => {
         if (object.geometry) object.geometry.dispose();
