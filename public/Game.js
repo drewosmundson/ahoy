@@ -91,7 +91,7 @@ export class Game {
 
     // Handle enemy projectiles
     this.socket.on('enemyProjectileFired', (data) => {
-      this.createEnemyProjectile(data);
+      this.enemyFiredProjectile(data);
     });
 
   }
@@ -100,9 +100,8 @@ export class Game {
     const { playerId, position, rotation } = data;
     
     if (!this.enemyBoats.has(playerId)) {
-      // Create new enemy boat
       const enemyBoat = new Boat(this.scene, this.waterLevel, null, false, this.terrain);
-      enemyBoat.setEnemyMode(true); // Set as enemy boat
+      enemyBoat.setEnemyMode(true);
       this.enemyBoats.set(playerId, enemyBoat);
     }
     
@@ -111,57 +110,42 @@ export class Game {
     enemyBoat.setRotation(rotation);
   }
 
-  createEnemyProjectile(data) {
-    const { playerId, position, rotation, sideOfBoat, timestamp, ownerId } = data;
-    
-    // Create enemy projectile with proper owner ID
+  createProjectile(positionX, positionZ, rotation, sideOfBoat) {
     const projectile = new Projectile(
-      this.scene, 
-      this.waterLevel, 
-      this.terrain, 
-      position.x, 
-      position.z,
+      this.scene,
+      this.waterLevel,
+      this.terrain,
+      positionX,
+      positionZ,
       rotation,
       sideOfBoat
     );
     this.projectiles.push(projectile);
   }
 
+  enemyFiredProjectile(data) {
+    const { position, rotation, sideOfBoat } = data;
+    this.createProjectile(position.x, position.z, rotation, sideOfBoat);
+  }
+
   // Centralized projectile firing method
-  fireProjectile(sideOfBoat) {
+  playerFiredProjectile(sideOfBoat) {
     if (!this.isAlive || !this.socket) {
       return;
     }
 
-    const boatPosition = this.boat.getPosition();
-    const boatRotation = this.boat.getRotation();
+    const position = this.boat.getPosition();
+    const rotation = this.boat.getRotation();
 
-    // Create the projectile
-    const projectile = new Projectile(
-      this.scene, 
-      this.waterLevel, 
-      this.terrain, 
-      boatPosition.x, 
-      boatPosition.z,
-      boatRotation,
-      sideOfBoat
-    );
-    
-    // Add to player projectiles array
-    this.projectiles.push(projectile);
-
-    // Emit to multiplayer if enabled
+    this.createProjectile(position.x, position.z, rotation, sideOfBoat);
     if (this.multiplayer) {
       this.socket.emit('projectileFired', {
         position: {
-          x: boatPosition.x,
-          y: this.waterLevel,
-          z: boatPosition.z
+          x: position.x,
+          z: position.z
         },
         rotation: boatRotation,
-        timestamp: Date.now(),
         sideOfBoat,
-        ownerId: this.socket.id
       });
     }
   }
@@ -174,45 +158,6 @@ export class Game {
         this.projectiles.splice(i, 1);
       }
     }
-  }
-
-
-  createHitEffect(position) {
-    // Create explosion effect at hit location
-    const explosionGeometry = new THREE.SphereGeometry(2, 12, 12);
-    const explosionMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xFF4500,
-      transparent: true,
-      opacity: 0.8
-    });
-    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-    explosion.position.set(position.x, position.y, position.z);
-    
-    this.scene.add(explosion);
-    
-    // Animate explosion
-    const startTime = Date.now();
-    const duration = 600;
-    
-    const animateExplosion = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-      
-      if (progress >= 1) {
-        this.scene.remove(explosion);
-        explosion.geometry.dispose();
-        explosion.material.dispose();
-        return;
-      }
-      
-      const scale = 1 + progress * 3;
-      explosion.scale.set(scale, scale, scale);
-      explosion.material.opacity = 0.8 * (1 - progress);
-      
-      requestAnimationFrame(animateExplosion);
-    };
-    
-    animateExplosion();
   }
 
   toggleFog() {

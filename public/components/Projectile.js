@@ -187,10 +187,43 @@ export class Projectile {
     animateDust();
   }
   
-  createBoatHit() {
-
+  createHitEffect(position) {
+    // Create explosion effect at hit location
+    const explosionGeometry = new THREE.SphereGeometry(2, 12, 12);
+    const explosionMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xFF4500,
+      transparent: true,
+      opacity: 0.8
+    });
+    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+    explosion.position.set(position.x, position.y, position.z);
+    
+    this.scene.add(explosion);
+    
+    // Animate explosion
+    const startTime = Date.now();
+    const duration = 600;
+    
+    const animateExplosion = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / duration;
+      
+      if (progress >= 1) {
+        this.scene.remove(explosion);
+        explosion.geometry.dispose();
+        explosion.material.dispose();
+        return;
+      }
+      
+      const scale = 1 + progress * 3;
+      explosion.scale.set(scale, scale, scale);
+      explosion.material.opacity = 0.8 * (1 - progress);
+      
+      requestAnimationFrame(animateExplosion);
+    };
+    
+    animateExplosion();
   }
-
 
   destroy() {
     if (!this.isActive) return;

@@ -63,11 +63,8 @@ export class GameManager {
   }
 
   handleProjectileFired(socket, data) {
-      const currentLobby = socket.currentLobby;
-      
-      if (currentLobby) {
+      if (socket.currentLobby) {
         socket.to(currentLobby).emit('enemyProjectileFired', {
-          playerId: socket.id,
           position: data.position,
           rotation: data.rotation,
           timestamp: data.timestamp,

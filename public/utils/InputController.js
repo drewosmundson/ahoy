@@ -44,10 +44,10 @@ export class InputController {
     handleMouseDown(event) {
       switch(event.button) {
         case 0: // Left mouse button
-          this.game.fireProjectile(this.left);
+          this.game.playerFiredProjectile(this.left);
           break;
         case 2: // Right mouse button
-          this.game.fireProjectile(this.right);
+          this.game.playerFiredProjectile(this.right);
           break;
       }
     }
