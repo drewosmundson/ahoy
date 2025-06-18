@@ -63,18 +63,21 @@ export class GameManager {
   }
 
   handleProjectileFired(socket, data) {
-      if (socket.currentLobby) {
-        socket.to(currentLobby).emit('enemyProjectileFired', {
-          position: data.position,
-          rotation: data.rotation,
-          timestamp: data.timestamp,
-          sideOfBoat: data.sideOfBoat,
-
-        });
-        
-        console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
-      }
+    // FIX: Add missing currentLobby variable declaration
+    const currentLobby = socket.currentLobby;
+    
+    if (currentLobby) {
+      socket.to(currentLobby).emit('enemyProjectileFired', {
+        playerId: socket.id, // Add playerId to identify who fired
+        position: data.position,
+        rotation: data.rotation,
+        timestamp: data.timestamp || Date.now(), // Add timestamp if not provided
+        sideOfBoat: data.sideOfBoat
+      });
+      
+      console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
     }
+  }
 
   handleConnection(socket) {
     // Game-related event handlers

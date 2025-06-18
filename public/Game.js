@@ -128,24 +128,25 @@ export class Game {
     this.createProjectile(position.x, position.z, rotation, sideOfBoat);
   }
 
-  // Centralized projectile firing method
   playerFiredProjectile(sideOfBoat) {
     if (!this.isAlive || !this.socket) {
       return;
     }
 
     const position = this.boat.getPosition();
-    const rotation = this.boat.getRotation();
+    const rotation = this.boat.getRotation(); // FIX: Use 'rotation' instead of undefined 'boatRotation'
 
     this.createProjectile(position.x, position.z, rotation, sideOfBoat);
+    
     if (this.multiplayer) {
       this.socket.emit('projectileFired', {
         position: {
           x: position.x,
           z: position.z
         },
-        rotation: boatRotation,
+        rotation: rotation, // FIX: Use 'rotation' instead of undefined 'boatRotation'
         sideOfBoat,
+        timestamp: Date.now() // Add timestamp for synchronization
       });
     }
   }
