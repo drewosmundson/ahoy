@@ -18,7 +18,6 @@ export class Boat {
     this.maxHealth = 100;
     
     // Multiplayer properties
-    this.enemyBoats = {};
     this.lastEmitTime = 0;
     this.emitInterval = 50;
     this.lastPosition = { x: 0, z: 0 };
@@ -255,6 +254,57 @@ export class Boat {
       boat.model.rotation.y = newRotY;
     });
   }
+
+  checkProjectileCollision(projectile) {
+    if (!this.model || !projectile) return false;
+
+    const boatPosition = this.model.position;
+    const projectilePosition = projectile.getPosition();
+
+    // Check distance between boat and projectile
+    const distance = boatPosition.distanceTo(projectilePosition);
+    
+    // FIX: More reasonable collision radius (boat hull is 3x6 units)
+    const collisionRadius = 4; // Reduced from 20 to 4
+    
+    if (distance < collisionRadius) {
+      console.log('COLLISION DETECTED!');
+      return true; // Collision detected
+    }
+    
+    return false; // No collision
+  }
+
+takeDamage(amount = 25) {
+  if (this.isEnemyBoat) {
+    this.health -= amount;
+    console.log(`Enemy boat took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+    
+    if (this.health <= 0) {
+      console.log('Enemy boat destroyed!');
+      this.destroy();
+    }
+    
+    // Visual damage indicator (optional)
+    this.showDamageEffect();
+  }
+}
+
+showDamageEffect() {
+  // Create a brief red flash effect
+  if (this.model) {
+    this.model.traverse((child) => {
+      if (child.material && child.material.color) {
+        const originalColor = child.material.color.clone();
+        child.material.color.setHex(0xFF0000); // Red
+        
+        setTimeout(() => {
+          child.material.color.copy(originalColor);
+        }, 200);
+      }
+    });
+  }
+}
 
   emitPositionUpdate() {
     if (!this.multiplayer || !this.socket) return;

@@ -1,3 +1,4 @@
+// GameManager.js - Enhanced with hit detection and debugging
 export class GameManager {
   constructor(io, lobbyManager) {
     this.io = io;
@@ -51,27 +52,15 @@ export class GameManager {
     }
   }
 
-  handleBoatMovement(socket, data) {
-    const currentLobby = socket.currentLobby;
-    
-    if (currentLobby) {
-      socket.to(currentLobby).emit("enemyBoatMovement", {
-        playerId: socket.id,
-        ...data
-      });
-    }
-  }
-
   handleProjectileFired(socket, data) {
-    // FIX: Add missing currentLobby variable declaration
     const currentLobby = socket.currentLobby;
     
     if (currentLobby) {
       socket.to(currentLobby).emit('enemyProjectileFired', {
-        playerId: socket.id, // Add playerId to identify who fired
+        playerId: socket.id,
         position: data.position,
         rotation: data.rotation,
-        timestamp: data.timestamp || Date.now(), // Add timestamp if not provided
+        timestamp: data.timestamp || Date.now(),
         sideOfBoat: data.sideOfBoat
       });
       
@@ -79,7 +68,42 @@ export class GameManager {
     }
   }
 
+  // NEW: Handle boat hit events
+  handleBoatHit(socket, data) {
+    const currentLobby = socket.currentLobby;
+    
+    if (currentLobby) {
+      console.log(`Player ${socket.id} hit player ${data.targetPlayerId} for ${data.damage} damage`);
+      
+      // Notify all players in the lobby about the hit
+      this.io.to(currentLobby).emit('boatHit', {
+        attackerId: socket.id,
+        targetPlayerId: data.targetPlayerId,
+        damage: data.damage,
+        hitPosition: data.hitPosition,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // NEW: Enhanced debug handler
+  handleDebug(socket, data) {
+    const currentLobby = socket.currentLobby;
+    console.log(`Debug from ${socket.id} in lobby ${currentLobby}:`, data);
+    
+    // Optionally broadcast debug info to other clients for testing
+    if (currentLobby && data) {
+      socket.to(currentLobby).emit('debugInfo', {
+        from: socket.id,
+        data: data,
+        timestamp: Date.now()
+      });
+    }
+  }
+
   handleConnection(socket) {
+    console.log(`Player ${socket.id} connected for game events`);
+    
     // Game-related event handlers
     socket.on("startGame", (data) => {
       this.startGame(socket, data);
@@ -93,20 +117,35 @@ export class GameManager {
       this.handlePlayerMovement(socket, data);
     });
 
-    socket.on("newBoatPosition", (data) => {
-      this.handleBoatMovement(socket, data);
-    });
-
     socket.on('projectileFired', (data) => {
       this.handleProjectileFired(socket, data);
     });
 
-    socket.on("debug", () => {
-      console.log("Debug event received");
+    // NEW: Enhanced debug and hit detection handlers
+    socket.on("debug", (data) => {
+      this.handleDebug(socket, data);
+    });
+
+    socket.on('boatHit', (data) => {
+      this.handleBoatHit(socket, data);
+    });
+
+    // NEW: Handle boat destroyed events
+    socket.on('boatDestroyed', (data) => {
+      const currentLobby = socket.currentLobby;
+      if (currentLobby) {
+        console.log(`Boat destroyed: ${data.playerId}`);
+        this.io.to(currentLobby).emit('boatDestroyed', {
+          playerId: data.playerId,
+          destroyer: socket.id,
+          timestamp: Date.now()
+        });
+      }
     });
   }
 
   handleDisconnection(socket) {
+    console.log(`Player ${socket.id} disconnected from game`);
     // Game-specific cleanup if needed
     // Most cleanup is handled by LobbyManager
   }

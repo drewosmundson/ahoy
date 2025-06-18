@@ -19,24 +19,23 @@ export class Game {
     this.multiplayer = multiplayer;
     this.heightmap = heightmap;
     this.heightmapOverlay = heightmapOverlay;
-    
+
     this.lastTime = 0;
-    
-    // Enemy boat management
-    this.enemyBoats = new Map(); // Map of playerId -> boat instance
-    
+
+    this.enemyBoats = {}
+
     // Centralized projectile management
     this.projectiles = []; // Player's own projectiles
-  
+
     this.isAlive = true;
-    
+
     this.initRenderer();
     this.initCamera();
     this.initSound();
     this.initLighting();
     this.initComponents();
     this.initMultiplayerEvents();
-    
+
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
   }
@@ -54,7 +53,7 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
     this.camera.position.set(0, 30, 50);
     this.camera.lookAt(0, 0, 0);
-    
+
     this.cameraController = new CameraController(this.camera, this.canvas);
   }
 
@@ -84,30 +83,11 @@ export class Game {
   initMultiplayerEvents() {
     if (!this.socket) return;
 
-    // Handle enemy boat movements
-    this.socket.on('enemyBoatMovement', (data) => {
-      this.updateEnemyBoat(data);
-    });
-
     // Handle enemy projectiles
     this.socket.on('enemyProjectileFired', (data) => {
       this.enemyFiredProjectile(data);
     });
 
-  }
-
-  updateEnemyBoat(data) {
-    const { playerId, position, rotation } = data;
-    
-    if (!this.enemyBoats.has(playerId)) {
-      const enemyBoat = new Boat(this.scene, this.waterLevel, null, false, this.terrain);
-      enemyBoat.setEnemyMode(true);
-      this.enemyBoats.set(playerId, enemyBoat);
-    }
-    
-    const enemyBoat = this.enemyBoats.get(playerId);
-    enemyBoat.setPosition(position.x, position.y, position.z);
-    enemyBoat.setRotation(rotation);
   }
 
   createProjectile(positionX, positionZ, rotation, sideOfBoat) {
@@ -216,27 +196,25 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
-  update(time) {
-    const deltaTime = this.lastTime === 0 ? 16 : time - this.lastTime;
-    this.lastTime = time;
+update(time) {
 
-    // Update all components
-    this.water?.update(time);
-    
-    if (this.isAlive) {
-      this.boat?.update(time, this.input.boatMovement, deltaTime);
-    }
-    
-    // Update enemy boats
-    for (const [playerId, enemyBoat] of this.enemyBoats) {
-      enemyBoat.update(time, null, deltaTime);
-    }
-    
-    // Update all projectiles (centralized)
-    this.updateProjectiles(deltaTime);
-    
-    this.cameraController?.update(this.boat);
+  const deltaTime = this.lastTime === 0 ? 16 : time - this.lastTime;
+  this.lastTime = time;
+
+  // Update all components
+  this.water?.update(time);
+  
+  if (this.isAlive) {
+    this.boat?.update(time, this.input.boatMovement, deltaTime);
+
   }
+  
+  this.updateProjectiles(deltaTime);
+
+
+  
+  this.cameraController?.update(this.boat);
+}
 
   animate = (time) => {
     this.update(time);

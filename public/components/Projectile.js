@@ -187,43 +187,101 @@ export class Projectile {
     animateDust();
   }
   
-  createHitEffect(position) {
-    // Create explosion effect at hit location
-    const explosionGeometry = new THREE.SphereGeometry(2, 12, 12);
-    const explosionMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xFF4500,
+createHitEffect(position = null) {
+  // Use provided position or current projectile position
+  const hitPosition = position || this.getPosition();
+  
+  console.log('Creating hit effect at position:', hitPosition);
+  
+  // Create explosion effect at hit location
+  const explosionGeometry = new THREE.SphereGeometry(2, 12, 12);
+  const explosionMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xFF4500,
+    transparent: true,
+    opacity: 0.8
+  });
+  const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+  explosion.position.copy(hitPosition);
+  
+  this.scene.add(explosion);
+  
+  // Create particle effects
+  this.createParticleExplosion(hitPosition);
+  
+  // Animate explosion
+  const startTime = Date.now();
+  const duration = 600;
+  
+  const animateExplosion = () => {
+    const elapsed = Date.now() - startTime;
+    const progress = elapsed / duration;
+    
+    if (progress >= 1) {
+      this.scene.remove(explosion);
+      explosion.geometry.dispose();
+      explosion.material.dispose();
+      return;
+    }
+    
+    const scale = 1 + progress * 3;
+    explosion.scale.set(scale, scale, scale);
+    explosion.material.opacity = 0.8 * (1 - progress);
+    
+    requestAnimationFrame(animateExplosion);
+  };
+  
+  animateExplosion();
+}
+
+createParticleExplosion(position) {
+  // Create multiple small particles for more dramatic effect
+  for (let i = 0; i < 8; i++) {
+    const particleGeometry = new THREE.SphereGeometry(0.3, 6, 6);
+    const particleMaterial = new THREE.MeshBasicMaterial({
+      color: Math.random() > 0.5 ? 0xFF4500 : 0xFFFF00,
       transparent: true,
       opacity: 0.8
     });
-    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-    explosion.position.set(position.x, position.y, position.z);
+    const particle = new THREE.Mesh(particleGeometry, particleMaterial);
     
-    this.scene.add(explosion);
+    particle.position.copy(position);
     
-    // Animate explosion
+    // Random velocity for each particle
+    const velocity = {
+      x: (Math.random() - 0.5) * 10,
+      y: Math.random() * 8 + 2,
+      z: (Math.random() - 0.5) * 10
+    };
+    
+    this.scene.add(particle);
+    
     const startTime = Date.now();
-    const duration = 600;
+    const duration = 800;
     
-    const animateExplosion = () => {
+    const animateParticle = () => {
       const elapsed = Date.now() - startTime;
       const progress = elapsed / duration;
       
       if (progress >= 1) {
-        this.scene.remove(explosion);
-        explosion.geometry.dispose();
-        explosion.material.dispose();
+        this.scene.remove(particle);
+        particle.geometry.dispose();
+        particle.material.dispose();
         return;
       }
       
-      const scale = 1 + progress * 3;
-      explosion.scale.set(scale, scale, scale);
-      explosion.material.opacity = 0.8 * (1 - progress);
+      // Apply gravity and movement
+      particle.position.x += velocity.x * 0.02;
+      particle.position.y += velocity.y * 0.02 - (progress * 5); // Gravity
+      particle.position.z += velocity.z * 0.02;
       
-      requestAnimationFrame(animateExplosion);
+      particle.material.opacity = 0.8 * (1 - progress);
+      
+      requestAnimationFrame(animateParticle);
     };
     
-    animateExplosion();
+    animateParticle();
   }
+}
 
   destroy() {
     if (!this.isActive) return;
