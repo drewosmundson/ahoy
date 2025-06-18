@@ -241,15 +241,24 @@ export class Game {
       }
     }
   }
+  // Game.js - Fixed collision detection to prevent double hits
   updateEnemyProjectiles(deltaTime) {
-    for (let i = 0; i < this.enemyProjectiles.length; i++) {
+    for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
       const enemyProjectile = this.enemyProjectiles[i];
       
+      // Check collision BEFORE updating projectile
+      const collisionDetected = this.boat.checkEnemyProjectileCollision(enemyProjectile);
+      
+      // If collision was detected, remove projectile immediately
+      if (collisionDetected) {
+        this.enemyProjectiles.splice(i, 1);
+        continue; // Skip to next projectile
+      }
+      
+      // Update projectile if no collision
       if (!enemyProjectile.update(deltaTime) || !enemyProjectile.isProjectileActive()) {
         this.enemyProjectiles.splice(i, 1);
       }
-
-      this.boat.checkEnemyProjectileCollision(enemyProjectile)
     }
   }
   toggleFog() {

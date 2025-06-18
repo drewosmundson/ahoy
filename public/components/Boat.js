@@ -162,55 +162,91 @@ export class Boat {
     }
   }
 
-  
-  checkEnemyProjectileCollision(projectile) {
-    if (!this.model || !projectile) return false;
-
-    const boatPosition = this.model.position;
-    const projectilePosition = projectile.getPosition();
-
-    // Check distance between boat and projectile
-    const distance = boatPosition.distanceTo(projectilePosition);
-    
-    // FIX: More reasonable collision radius (boat hull is 3x6 units)
-    const collisionRadius = 2; 
-    
-    if (distance < collisionRadius) {
-      this.socket.emit('debug')
-
-    }
+// Boat.js - Fixed collision detection method
+checkEnemyProjectileCollision(projectile) {
+  if (!this.model || !projectile || !projectile.isProjectileActive()) {
+    return false;
   }
+
+  const boatPosition = this.model.position;
+  const projectilePosition = projectile.getPosition();
+
+  // Check distance between boat and projectile
+  const distance = boatPosition.distanceTo(projectilePosition);
+  
+  // More reasonable collision radius (boat hull is 3x6 units)
+  const collisionRadius = 2; 
+  
+  if (distance < collisionRadius) {
+
+    // Destroy projectile immediately
+    projectile.createHitEffect();
+    projectile.destroy();
+    
+    // Apply damage to this boat
+    this.takeDamage(25);
+
+    
+    // Emit hit event for multiplayer coordination
+    if (this.socket && this.multiplayer) {
+      this.socket.emit('debug', {
+        message: 'Projectile hit',
+        damage: 25,
+        health: this.health
+      });
+      
+      // Also emit a more specific hit event
+      this.socket.emit('boatHit', {
+        targetPlayerId: this.socket.id,
+        damage: 25,
+        hitPosition: {
+          x: boatPosition.x,
+          y: boatPosition.y,
+          z: boatPosition.z
+        }
+      });
+    }
+    
+    return true; // Return true to indicate collision occurred
+  }
+  
+  return false; // No collision
+}
 
 takeDamage(amount = 25) {
-  if (this.isEnemyBoat) {
-    this.health -= amount;
-    console.log(`Enemy boat took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+  // Remove the isEnemyBoat check - all boats should be able to take damage
+  this.health -= amount;
+  
+  if (this.health <= 0) {
+    this.destroy();
     
-    if (this.health <= 0) {
-      console.log('Enemy boat destroyed!');
-      this.destroy();
+    // Emit boat destroyed event for multiplayer
+    if (this.socket && this.multiplayer) {
+      this.socket.emit('boatDestroyed', {
+        playerId: this.socket.id,
+        timestamp: Date.now()
+      });
     }
-    
-    // Visual damage indicator (optional)
-    this.showDamageEffect();
   }
+  // Visual damage indicator
+  this.showDamageEffect();
 }
 
-showDamageEffect() {
-  // Create a brief red flash effect
-  if (this.model) {
-    this.model.traverse((child) => {
-      if (child.material && child.material.color) {
-        const originalColor = child.material.color.clone();
-        child.material.color.setHex(0xFF0000); // Red
-        
-        setTimeout(() => {
-          child.material.color.copy(originalColor);
-        }, 200);
-      }
-    });
+  showDamageEffect() {
+    // Create a brief red flash effect
+    if (this.model) {
+      this.model.traverse((child) => {
+        if (child.material && child.material.color) {
+          const originalColor = child.material.color.clone();
+          child.material.color.setHex(0xFF0000); // Red
+          
+          setTimeout(() => {
+            child.material.color.copy(originalColor);
+          }, 200);
+        }
+      });
+    }
   }
-}
 
   emitPositionUpdate() {
     if (!this.multiplayer || !this.socket) return;
@@ -310,8 +346,6 @@ showDamageEffect() {
         this.model.rotation.z = noiseValue * 0.1;
       }
     }
-
-
     this.emitPositionUpdate();
   }
 
