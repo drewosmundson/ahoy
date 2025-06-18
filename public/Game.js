@@ -27,10 +27,7 @@ export class Game {
     
     // Centralized projectile management
     this.projectiles = []; // Player's own projectiles
-    
-    // Player health
-    this.playerHealth = 100;
-    this.maxPlayerHealth = 100;
+  
     this.isAlive = true;
     
     this.initRenderer();
@@ -65,8 +62,6 @@ export class Game {
     this.soundManager = new SoundManager(this.camera);
     this.soundManager.loadSoundEffect('mainTheme', 'resources/sounds/Lost_Sheep_Compressed.mp3');
     this.soundManager.loadSoundEffect('ambient', 'resources/sounds/waves.mp3');
-    this.soundManager.loadSoundEffect('hit', 'resources/sounds/explosion.mp3');
-    this.soundManager.loadSoundEffect('death', 'resources/sounds/death.mp3');
     this.playBackgroundMusic();
   }
 
@@ -74,8 +69,7 @@ export class Game {
     const directionalLight = new THREE.DirectionalLight(0xFFF5EE, 1);
     directionalLight.position.set(50, 50, 50);
     this.scene.add(directionalLight);
-    
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     this.scene.add(ambientLight);
   }
 
@@ -100,25 +94,6 @@ export class Game {
       this.createEnemyProjectile(data);
     });
 
-    // Handle player hits
-    this.socket.on('playerHit', (data) => {
-      this.handlePlayerHit(data);
-    });
-
-    // Handle player deaths
-    this.socket.on('playerKilled', (data) => {
-      this.handlePlayerKilled(data);
-    });
-
-    // Handle player healing
-    this.socket.on('playerHealed', (data) => {
-      this.handlePlayerHealed(data);
-    });
-
-    // Handle game over
-    this.socket.on('gameOver', (data) => {
-      this.handleGameOver(data);
-    });
   }
 
   updateEnemyBoat(data) {
@@ -191,23 +166,15 @@ export class Game {
     }
   }
 
-  // Update all projectiles
   updateProjectiles(deltaTime) {
-    // Update player projectiles
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+    for (let i = 0; i < this.projectiles.length; i++) {
       const projectile = this.projectiles[i];
       
       if (!projectile.update(deltaTime) || !projectile.isProjectileActive()) {
         this.projectiles.splice(i, 1);
       }
     }
-
-
-  
   }
-
-
-
 
 
   createHitEffect(position) {
@@ -247,8 +214,6 @@ export class Game {
     
     animateExplosion();
   }
-
-
 
   toggleFog() {
     if (this.scene.fog) {

@@ -4,8 +4,7 @@ export class GameManager {
     this.lobbyManager = lobbyManager;
   }
 
-  startGame(socket, data) {
-    const { lobbyId } = data;
+  startGame(socket) {
     const currentLobby = socket.currentLobby;
     
     console.log("Start game button pressed");
@@ -73,134 +72,12 @@ export class GameManager {
           rotation: data.rotation,
           timestamp: data.timestamp,
           sideOfBoat: data.sideOfBoat,
-          ownerId: socket.id // Ensure ownership is clear
+
         });
         
         console.log(`Player ${socket.id} fired projectile in lobby ${currentLobby}`);
       }
     }
-
-    handleProjectileHit(socket, data) {
-    const currentLobby = socket.currentLobby;
-    const lobby = this.lobbyManager.getLobby(currentLobby);
-    
-    if (!currentLobby || !lobby) return;
-
-    const { hitType, targetPlayerId, attackerPlayerId, damage, hitPosition, timestamp } = data;
-    
-    // Validate hit data
-    if (!attackerPlayerId || !targetPlayerId || damage === undefined) {
-      console.warn('Invalid hit data received:', data);
-      return;
-    }
-    
-    // Ensure the attacker is the one sending the hit event
-    if (attackerPlayerId !== socket.id) {
-      console.warn(`Hit validation failed: ${socket.id} tried to send hit for ${attackerPlayerId}`);
-      return;
-    }
-    
-    console.log(`Projectile hit validated: ${attackerPlayerId} hit ${targetPlayerId} for ${damage} damage`);
-    
-    // Find the target player and apply damage
-    const targetPlayer = lobby.players.find(p => p.id === targetPlayerId);
-    
-    if (targetPlayer && targetPlayer.alive) {
-      const previousHealth = targetPlayer.health;
-      targetPlayer.health = Math.max(0, targetPlayer.health - damage);
-      
-      console.log(`${targetPlayerId} health: ${previousHealth} -> ${targetPlayer.health}`);
-      
-      // Check if player is killed
-      if (targetPlayer.health <= 0) {
-        targetPlayer.alive = false;
-        console.log(`Player ${targetPlayerId} was killed by ${attackerPlayerId}`);
-        
-        // Broadcast player death
-        this.io.to(currentLobby).emit('playerKilled', {
-          killedPlayerId: targetPlayerId,
-          killerPlayerId: attackerPlayerId,
-          timestamp: timestamp
-        });
-      }
-      
-      // Broadcast hit information to all players in lobby
-      this.io.to(currentLobby).emit('playerHit', {
-        attackerPlayerId: attackerPlayerId,
-        targetPlayerId: targetPlayerId,
-        damage: damage,
-        newHealth: targetPlayer.health,
-        hitPosition: hitPosition,
-        timestamp: timestamp
-      });
-      
-      // Update lobby player list
-      this.io.to(currentLobby).emit("lobbyUpdated", {
-        players: lobby.players
-      });
-      
-      // Check for game end conditions
-      const alivePlayers = lobby.players.filter(p => p.alive);
-      if (alivePlayers.length <= 1) {
-        this.io.to(currentLobby).emit('gameOver', {
-          winner: alivePlayers.length === 1 ? alivePlayers[0] : null,
-          timestamp: Date.now()
-        });
-      }
-    } else {
-      console.warn(`Target player ${targetPlayerId} not found or already dead`);
-    }
-  }
-
-  handlePlayerHeal(socket, data) {
-    const currentLobby = socket.currentLobby;
-    const lobby = this.lobbyManager.getLobby(currentLobby);
-    
-    if (!currentLobby || !lobby) return;
-
-    const { healAmount } = data;
-    const player = lobby.players.find(p => p.id === socket.id);
-    
-    if (player && player.alive) {
-      player.health = Math.min(player.maxHealth, player.health + healAmount);
-      
-      // Broadcast healing to all players
-      this.io.to(currentLobby).emit('playerHealed', {
-        playerId: socket.id,
-        healAmount: healAmount,
-        newHealth: player.health,
-        timestamp: Date.now()
-      });
-      
-      // Update lobby player list
-      this.io.to(currentLobby).emit("lobbyUpdated", {
-        players: lobby.players
-      });
-    }
-  }
-
-  handleProjectileImpact(socket, data) {
-    const currentLobby = socket.currentLobby;
-    
-    if (currentLobby) {
-      socket.to(currentLobby).emit('enemyProjectileImpact', {
-        playerId: socket.id,
-        position: data.position,
-        timestamp: data.timestamp
-      });
-    }
-  }
-
-  handleGameAction(socket, action) {
-    const currentLobby = socket.currentLobby;
-    
-    if (currentLobby) {
-      socket.to(currentLobby).emit("playerGameAction", {
-        playerId: socket.id,
-        ...action
-      });
-    }
-  }
 
   handleConnection(socket) {
     // Game-related event handlers
@@ -222,22 +99,6 @@ export class GameManager {
 
     socket.on('projectileFired', (data) => {
       this.handleProjectileFired(socket, data);
-    });
-
-    socket.on('projectileHit', (data) => {
-      this.handleProjectileHit(socket, data);
-    });
-
-    socket.on('playerHeal', (data) => {
-      this.handlePlayerHeal(socket, data);
-    });
-
-    socket.on('projectileImpact', (data) => {
-      this.handleProjectileImpact(socket, data);
-    });
-
-    socket.on("gameAction", (action) => {
-      this.handleGameAction(socket, action);
     });
 
     socket.on("debug", () => {

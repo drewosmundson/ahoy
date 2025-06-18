@@ -103,10 +103,8 @@ generateTerrain() {
       if (x < size && y < size) {
         const baseHeight = this.heightmap[y][x];
         const overlay = this.heightmapOverlay[y][x];
-        const finalHeight = baseHeight * overlay  * this.heightMultiply + (this.lowPoly ? 0.8 : 0);
+        const finalHeight = baseHeight * overlay  * this.heightMultiply + 0.2;
         vertices[i + 1] = finalHeight ;
-        
-
       }
     }
 
