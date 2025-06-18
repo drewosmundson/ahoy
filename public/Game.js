@@ -23,6 +23,7 @@ export class Game {
     this.lastTime = 0;
     this.enemyBoats = {};
     this.projectiles = []; // Player's own projectiles
+    this.enemyProjectiles = [];
 
     this.isAlive = true;
 
@@ -128,18 +129,7 @@ export class Game {
   }
 
 
-  // Method to remove a specific enemy boat (useful for when players disconnect)
-  removeEnemyBoat(playerId) {
-    if (this.enemyBoats[playerId]) {
-      const enemyData = this.enemyBoats[playerId];
-      if (enemyData.boat && enemyData.boat.model) {
-        this.scene.remove(enemyData.boat.model);
-        enemyData.boat.cleanup();
-      }
-      delete this.enemyBoats[playerId];
-      console.log(`Removed enemy boat for player ${playerId}`);
-    }
-  }
+
 
   updateEnemyBoatPosition(data) {
     const { playerId, position, rotation } = data;
@@ -192,55 +182,54 @@ export class Game {
         lerpStartTime: currentTime,
         lerpDuration: 100
       };
-      
+
       console.log(`Enemy boat created for ${playerId}. Total enemy boats:`, Object.keys(this.enemyBoats).length);
     }
   }
 
 
-
-
-
-
-  createProjectile(positionX, positionZ, rotation, sideOfBoat) {
-    const projectile = new Projectile(
+  enemyFiredProjectile(data) {
+    const { position, rotation, sideOfBoat } = data;
+    const enemyProjectile = new Projectile(
       this.scene,
       this.waterLevel,
       this.terrain,
-      positionX,
-      positionZ,
+      position.x,
+      position.z,
       rotation,
       sideOfBoat
     );
-    this.projectiles.push(projectile);
-  }
-
-  enemyFiredProjectile(data) {
-    const { position, rotation, sideOfBoat } = data;
-    this.createProjectile(position.x, position.z, rotation, sideOfBoat);
+    this.enemyProjectiles.push(enemyProjectile);
   }
 
   playerFiredProjectile(sideOfBoat) {
     if (!this.isAlive || !this.socket) {
       return;
     }
-
     const position = this.boat.getPosition();
-    const rotation = this.boat.getRotation(); // FIX: Use 'rotation' instead of undefined 'boatRotation'
-
-    this.createProjectile(position.x, position.z, rotation, sideOfBoat);
-    
+    const rotation = this.boat.getRotation();
+    const projectile = new Projectile(
+      this.scene,
+      this.waterLevel,
+      this.terrain,
+      position.x,
+      position.z,
+      rotation,
+      sideOfBoat
+    );
+    this.projectiles.push(projectile);
     if (this.multiplayer) {
       this.socket.emit('projectileFired', {
         position: {
           x: position.x,
           z: position.z
         },
-        rotation: rotation, // FIX: Use 'rotation' instead of undefined 'boatRotation'
+        rotation: rotation, 
         sideOfBoat,
         timestamp: Date.now() // Add timestamp for synchronization
       });
     }
+
   }
 
   updateProjectiles(deltaTime) {
@@ -250,11 +239,19 @@ export class Game {
       if (!projectile.update(deltaTime) || !projectile.isProjectileActive()) {
         this.projectiles.splice(i, 1);
       }
-
-      this.boat.checkProjectileCollision(projectile)
     }
   }
+  updateEnemyProjectiles(deltaTime) {
+    for (let i = 0; i < this.enemyProjectiles.length; i++) {
+      const enemyProjectile = this.enemyProjectiles[i];
+      
+      if (!enemyProjectile.update(deltaTime) || !enemyProjectile.isProjectileActive()) {
+        this.enemyProjectiles.splice(i, 1);
+      }
 
+      this.boat.checkEnemyProjectileCollision(enemyProjectile)
+    }
+  }
   toggleFog() {
     if (this.scene.fog) {
       this.scene.fog = null;
@@ -324,6 +321,7 @@ update(time) {
   }
   this.updateEnemyBoatInterpolation();
   this.updateProjectiles(deltaTime);
+  this.updateEnemyProjectiles(deltaTime); 
 
 
   
@@ -346,11 +344,7 @@ update(time) {
   cleanup() {
     this.boat?.cleanup();
     this.cameraController?.cleanup();
-      // Clean up enemy boats
-    Object.keys(this.enemyBoats).forEach(playerId => {
-      this.removeEnemyBoat(playerId);
-    });
-
+  
     // Cleanup all projectiles
     this.projectiles.forEach(projectile => {
       if (projectile.isProjectileActive()) {

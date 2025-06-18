@@ -145,16 +145,16 @@ export class Boat {
     const maxIteration = 100;
     let positionFound = false;
     
-    for (let i = 0; i < maxIteration; i++) {
-      const x = this.getRandomNumber(-200, 200);
-      const z = this.getRandomNumber(-200, 200);
+    // for (let i = 0; i < maxIteration; i++) {
+    //   const x = this.getRandomNumber(-200, 200);
+    //   const z = this.getRandomNumber(-200, 200);
       
-      if (this.terrain.getHeightAt(x, z) < this.waterLevel - 2) {
-        this.model.position.set(x, this.waterLevel, z);
-        positionFound = true;
-        break;
-      }
-    }
+    //   if (this.terrain.getHeightAt(x, z) < this.waterLevel - 2) {
+    //     this.model.position.set(x, this.waterLevel, z);
+    //     positionFound = true;
+    //     break;
+    //   }
+    // }
     
     if (!positionFound) {
       // fallback position if no suitable terrain was found
@@ -162,10 +162,8 @@ export class Boat {
     }
   }
 
-
-
-
-  checkProjectileCollision(projectile) {
+  
+  checkEnemyProjectileCollision(projectile) {
     if (!this.model || !projectile) return false;
 
     const boatPosition = this.model.position;
@@ -181,8 +179,6 @@ export class Boat {
       this.socket.emit('debug')
 
     }
-    
-
   }
 
 takeDamage(amount = 25) {
@@ -315,11 +311,9 @@ showDamageEffect() {
       }
     }
 
-    // Update multiplayer components
 
     this.emitPositionUpdate();
   }
-
 
 
   // Method to destroy this boat instance
@@ -346,6 +340,10 @@ showDamageEffect() {
   }
 
   cleanup() {
+    // Clean up enemy boats
+    Object.keys(this.enemyBoats).forEach(playerId => {
+      this.removeEnemyBoat(playerId);
+    });
 
     // Remove socket listeners
     if (this.socket && this.eventListenersAdded) {
