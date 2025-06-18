@@ -18,6 +18,7 @@ export class Boat {
     this.maxHealth = 100;
     
     // Multiplayer properties
+    this.enemyBoats = {};
     this.lastEmitTime = 0;
     this.emitInterval = 50;
     this.lastPosition = { x: 0, z: 0 };

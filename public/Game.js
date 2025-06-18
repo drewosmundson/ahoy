@@ -22,8 +22,6 @@ export class Game {
 
     this.lastTime = 0;
 
-    this.enemyBoats = {}
-
     // Centralized projectile management
     this.projectiles = []; // Player's own projectiles
 
