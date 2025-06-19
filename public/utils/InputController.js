@@ -1,3 +1,4 @@
+
 export class InputController {
     constructor(game) {
       this.game = game;
@@ -14,8 +15,6 @@ export class InputController {
       this.initKeyboardControls();
       // Initialize mouse controls
       this.initMouseControls();
-      // Initialize scroll controls
-      this.initScrollControls();
     }
     
     initKeyboardControls() {
@@ -40,27 +39,6 @@ export class InputController {
       window.addEventListener('contextmenu', (event) => {
         event.preventDefault();
       });
-    }
-    
-    initScrollControls() {
-      // Add scroll wheel event listener
-      // Note: The CameraController handles this directly on the canvas
-      // This is here as a backup or for additional scroll functionality
-      window.addEventListener('wheel', (event) => {
-        this.handleScroll(event);
-      }, { passive: false });
-    }
-    
-    handleScroll(event) {
-      // Optional: Handle scroll events here if needed
-      // The CameraController already handles zoom when pointer is locked
-      // You could add other scroll-based functionality here
-      
-      // Example: Scroll to change weapon or other game mechanics when not in pointer lock
-      if (!this.game.cameraController?.isPointerLocked) {
-        // Handle scroll for other purposes when not in camera lock mode
-        // event.preventDefault(); // Uncomment if you want to prevent page scrolling
-      }
     }
     
     handleMouseDown(event) {
@@ -112,13 +90,6 @@ export class InputController {
           this.game.toggleFog();
           break;
           
-        // Optional: Add zoom reset key
-        case 'r':
-          if (this.game.cameraController) {
-            this.game.cameraController.resetZoom();
-          }
-          break;
-          
         // Removed Q and E key controls - now using mouse
         // case 'e':
         //   this.game.fireProjectile(this.right);
@@ -167,4 +138,4 @@ export class InputController {
       this.boatMovement.left = false;
       this.boatMovement.right = false;
     }
-}
+  }

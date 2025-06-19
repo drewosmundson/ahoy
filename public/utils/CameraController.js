@@ -5,7 +5,9 @@ export class CameraController {
   constructor(camera, canvas) {
     this.camera = camera;
     this.canvas = canvas;
-    this.cameraMode = 'follow';
+    this.cameraMode = 'follow'; // free
+
+    this.height = 5;
     
     // Mouse look properties
     this.mouseX = 0;
@@ -14,12 +16,12 @@ export class CameraController {
     this.cameraPitch = 0;
     this.mouseSensitivity = 0.002;
     this.isPointerLocked = false;
-    this.maxPitch = Math.PI / 2;
+    this.maxPitch = Math.PI / 2 - 0.1;
     
     // Zoom properties for pointer-locked mode
     this.followDistance = 10; // Default distance
     this.minDistance = 3;     // Minimum zoom distance
-    this.maxDistance = 20;    // Maximum zoom distance
+    this.maxDistance = 25;    // Maximum zoom distance
     this.zoomSpeed = 1;       // Zoom sensitivity
     
     this.initControls();
@@ -44,7 +46,7 @@ export class CameraController {
     document.addEventListener('pointerlockchange', () => {
       this.isPointerLocked = document.pointerLockElement === this.canvas;
       if (this.isPointerLocked) {
-
+        console.log('Pointer locked - mouse look enabled');
       } else {
         console.log('Pointer unlocked - mouse look disabled');
       }
@@ -66,7 +68,7 @@ export class CameraController {
   initScrollZoom() {
     // Add wheel event listener for zoom control
     this.canvas.addEventListener('wheel', (event) => {
-   
+
         event.preventDefault();
         this.handleScrollZoom(event);
       
@@ -83,6 +85,7 @@ export class CameraController {
     // Clamp the distance to min/max values
     this.followDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.followDistance));
     
+    console.log(`Camera distance: ${this.followDistance.toFixed(1)}`);
   }
 
   requestPointerLock() {
@@ -172,54 +175,35 @@ export class CameraController {
 
   update(boat) {
     if (boat) {
+  
+
       const boatPos = boat.model.position;
       const boatRot = boat.model.rotation.y;
       const waterLevel = boat.waterLevel;
-      
+  
       if (this.isPointerLocked) {
-        if(this.cameraMode === 'free') {
-        // Mouse look camera - rotate around boat based on mouse input
-        // Use dynamic follow distance for zoom
+        if( this.cameraMode === 'free' ){
+          this.height = 5 * this.followDistance /2;
+        }
+        else {
+          this.height = 5;
+        }
+
         const distance = this.followDistance;
-        const height = 5 * this.followDistance / 2 ;
-        
         const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
-        const y = boatPos.y + Math.sin(this.cameraPitch) * distance + height;
+        const y = boatPos.y + Math.sin(this.cameraPitch) * distance + this.height;
         const z = boatPos.z + Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
         
         this.camera.position.set(x, y, z);
         this.camera.lookAt(boatPos);
-        } else {       
-           // Mouse look camera - rotate around boat based on mouse input
-        // Use dynamic follow distance for zoom
-        const distance = this.followDistance;
-        const height = 5 ;
-        
-        const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
-        const y = boatPos.y + Math.sin(this.cameraPitch) * distance + height;
-        const z = boatPos.z + Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
-        
-        this.camera.position.set(x, y, z);
-        this.camera.lookAt(boatPos);}
       } else {
-        
-
-        // Original follow camera behavior
-        const distance = 10;
-        const height = 5;
+        const distance = this.followDistance;
         const x = boatPos.x - Math.sin(boatRot) * distance;
         const z = boatPos.z - Math.cos(boatRot) * distance;
-
-        this.camera.position.set(x, waterLevel + height, z);
+        this.camera.position.set(x, waterLevel + this.height, z);
         this.camera.lookAt(boatPos);
       }
     }
-
-    // Update orbit controls when appropriate
-    if (this.controls?.enabled && !this.isPointerLocked && this.cameraMode === 'free') {
-      this.controls.update();
-    }
-
     if (this.shakeIntensity > 0) {
       const elapsed = Date.now() - this.shakeStartTime;
       if (elapsed < this.shakeDuration) {

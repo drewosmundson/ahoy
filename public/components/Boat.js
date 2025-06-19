@@ -347,6 +347,7 @@ takeDamage(amount = 25) {
       }
     }
     this.emitPositionUpdate();
+    this.model.rotation.y = this.model.rotation.y % 360
   }
 
 
