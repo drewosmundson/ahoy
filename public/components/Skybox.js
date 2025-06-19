@@ -8,18 +8,11 @@ export class Skybox {
     this.mesh = null;
     
     // Skybox image paths
-    this.imagePaths = {
-      posX: 'resources/images/sideSky.png',
-      negX: 'resources/images/sideSky.png',
-      posY: 'resources/images/topSky.png',
-      negY: 'resources/images/topSky.png',
-      posZ: 'resources/images/sideSky.png',
-      negZ: 'resources/images/sideSky.png'
-    };
+    this.imagePaths = {};
     
     // Load skybox textures
     this.loadSkybox();
-    this.loadClouds();
+
     this.loadFog();
   }
 
@@ -29,30 +22,6 @@ export class Skybox {
     this.scene.fog = new THREE.FogExp2(color, density);
   }
   
-  loadClouds() {
-    const loader = new THREE.TextureLoader();
-    loader.load('https://threejs.org/examples/textures/cloud10.png', (texture) => {
-      const cloudGeometry = new THREE.PlaneGeometry(10, 10);
-      const cloudMaterial = new THREE.MeshLambertMaterial({
-        map: texture,
-        transparent: true,
-        opacity: 0.6,
-        depthWrite: false,
-      });
-
-      for (let i = 0; i < 10; i++) {
-        const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial.clone());
-        cloud.position.set(
-          Math.random() * 50 - 25,
-          Math.random() * 20 - 10,
-          Math.random() * -20
-        );
-        cloud.rotation.z = Math.random() * 2 * Math.PI;
-        this.scene.add(cloud);
-      }
-    });
-  }
-
 
   loadSkybox() {
     // Create texture loader
@@ -89,18 +58,10 @@ export class Skybox {
       
       // Create materials
       const materials = sides.map((side, index) => {
-        // Use texture if loaded, otherwise use fallback color
-        if (textures[side]) {
-          return new THREE.MeshBasicMaterial({
-            map: textures[side],
-            side: THREE.BackSide
-          });
-        } else {
           return new THREE.MeshBasicMaterial({
             color: defaultColors[index],
             side: THREE.BackSide
           });
-        }
       });
       
       // Create skybox geometry
@@ -108,8 +69,7 @@ export class Skybox {
       // Create mesh and add to scene
       this.mesh = new THREE.Mesh(geometry, materials);
       this.scene.add(this.mesh);
-      
-      console.log(`Skybox created with ${loadedCount} of ${totalTextures} textures loaded`);
+    
     };
     
     // Helper to load a single texture
@@ -146,13 +106,5 @@ export class Skybox {
     loadTexture(this.imagePaths.negY, 'bottom');
     loadTexture(this.imagePaths.posZ, 'front');
     loadTexture(this.imagePaths.negZ, 'back');
-    
-    // Timeout as fallback if textures fail to load
-    setTimeout(() => {
-      if (loadedCount < totalTextures) {
-        console.warn('Timed out waiting for skybox textures, creating skybox with loaded textures only');
-        createSkybox();
-      }
-    }, 10000); // 10 second timeout
   }
 }
