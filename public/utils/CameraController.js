@@ -16,8 +16,15 @@ export class CameraController {
     this.isPointerLocked = false;
     this.maxPitch = Math.PI / 2 - 0.1;
     
+    // Zoom properties for pointer-locked mode
+    this.followDistance = 10; // Default distance
+    this.minDistance = 3;     // Minimum zoom distance
+    this.maxDistance = 25;    // Maximum zoom distance
+    this.zoomSpeed = 1;       // Zoom sensitivity
+    
     this.initControls();
     this.initMouseLook();
+    this.initScrollZoom();
   }
 
   initControls() {
@@ -56,14 +63,39 @@ export class CameraController {
     });
   }
 
+  initScrollZoom() {
+    // Add wheel event listener for zoom control
+    this.canvas.addEventListener('wheel', (event) => {
+      if (this.isPointerLocked && this.cameraMode === 'follow') {
+        event.preventDefault();
+        this.handleScrollZoom(event);
+      }
+    }, { passive: false });
+  }
+
+  handleScrollZoom(event) {
+    // Determine zoom direction (positive = zoom out, negative = zoom in)
+    const zoomDelta = event.deltaY > 0 ? this.zoomSpeed : -this.zoomSpeed;
+    
+    // Update follow distance
+    this.followDistance += zoomDelta;
+    
+    // Clamp the distance to min/max values
+    this.followDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.followDistance));
+    
+    console.log(`Camera distance: ${this.followDistance.toFixed(1)}`);
+  }
+
   requestPointerLock() {
     this.canvas.requestPointerLock();
   }
-addShake(intensity, duration) {
-  this.shakeIntensity = intensity;
-  this.shakeDuration = duration;
-  this.shakeStartTime = Date.now();
-}
+
+  addShake(intensity, duration) {
+    this.shakeIntensity = intensity;
+    this.shakeDuration = duration;
+    this.shakeStartTime = Date.now();
+  }
+
   handleMouseMove(event) {
     if (!this.isPointerLocked) return;
 
@@ -115,6 +147,19 @@ addShake(intensity, duration) {
     this.cameraPitch = 0;
   }
 
+  // Method to reset zoom distance
+  resetZoom() {
+    this.followDistance = 10;
+  }
+
+  // Method to set zoom limits
+  setZoomLimits(min, max) {
+    this.minDistance = min;
+    this.maxDistance = max;
+    // Clamp current distance to new limits
+    this.followDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.followDistance));
+  }
+
   lookRight() {
     if (!this.isPointerLocked) {
       this.cameraYaw += 0.1;
@@ -135,7 +180,8 @@ addShake(intensity, duration) {
       
       if (this.isPointerLocked) {
         // Mouse look camera - rotate around boat based on mouse input
-        const distance = 10;
+        // Use dynamic follow distance for zoom
+        const distance = this.followDistance;
         const height = 5;
         
         const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
@@ -160,18 +206,19 @@ addShake(intensity, duration) {
     if (this.controls?.enabled && !this.isPointerLocked && this.cameraMode === 'free') {
       this.controls.update();
     }
-      if (this.shakeIntensity > 0) {
-    const elapsed = Date.now() - this.shakeStartTime;
-    if (elapsed < this.shakeDuration) {
-      const progress = elapsed / this.shakeDuration;
-      const currentIntensity = this.shakeIntensity * (1 - progress);
-      
-      this.camera.position.x += (Math.random() - 0.5) * currentIntensity;
-      this.camera.position.y += (Math.random() - 0.5) * currentIntensity;
-    } else {
-      this.shakeIntensity = 0;
-    }
+
+    if (this.shakeIntensity > 0) {
+      const elapsed = Date.now() - this.shakeStartTime;
+      if (elapsed < this.shakeDuration) {
+        const progress = elapsed / this.shakeDuration;
+        const currentIntensity = this.shakeIntensity * (1 - progress);
+        
+        this.camera.position.x += (Math.random() - 0.5) * currentIntensity;
+        this.camera.position.y += (Math.random() - 0.5) * currentIntensity;
+      } else {
+        this.shakeIntensity = 0;
       }
+    }
   }
 
   cleanup() {
