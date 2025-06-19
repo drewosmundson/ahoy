@@ -14,12 +14,12 @@ export class CameraController {
     this.cameraPitch = 0;
     this.mouseSensitivity = 0.002;
     this.isPointerLocked = false;
-    this.maxPitch = Math.PI / 2 - 0.1;
+    this.maxPitch = Math.PI / 2;
     
     // Zoom properties for pointer-locked mode
     this.followDistance = 10; // Default distance
     this.minDistance = 3;     // Minimum zoom distance
-    this.maxDistance = 25;    // Maximum zoom distance
+    this.maxDistance = 20;    // Maximum zoom distance
     this.zoomSpeed = 1;       // Zoom sensitivity
     
     this.initControls();
@@ -44,7 +44,7 @@ export class CameraController {
     document.addEventListener('pointerlockchange', () => {
       this.isPointerLocked = document.pointerLockElement === this.canvas;
       if (this.isPointerLocked) {
-        console.log('Pointer locked - mouse look enabled');
+
       } else {
         console.log('Pointer unlocked - mouse look disabled');
       }
@@ -66,10 +66,10 @@ export class CameraController {
   initScrollZoom() {
     // Add wheel event listener for zoom control
     this.canvas.addEventListener('wheel', (event) => {
-      if (this.isPointerLocked && this.cameraMode === 'follow') {
+   
         event.preventDefault();
         this.handleScrollZoom(event);
-      }
+      
     }, { passive: false });
   }
 
@@ -83,7 +83,6 @@ export class CameraController {
     // Clamp the distance to min/max values
     this.followDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.followDistance));
     
-    console.log(`Camera distance: ${this.followDistance.toFixed(1)}`);
   }
 
   requestPointerLock() {
@@ -125,11 +124,10 @@ export class CameraController {
       };
     } else {
       this.cameraMode = 'free';
-      this.controls.enabled = true;
-      if (this.freeCameraPosition) {
-        this.camera.position.copy(this.freeCameraPosition.position);
-        this.controls.target.copy(this.freeCameraPosition.target);
-        this.controls.update();
+      this.controls.enabled = false;
+      this.freeCameraPosition = {
+        position: this.camera.position.clone(),
+        target: this.controls.target.clone()
       }
     }
   }
@@ -173,16 +171,17 @@ export class CameraController {
   }
 
   update(boat) {
-    if (this.cameraMode === 'follow' && boat) {
+    if (boat) {
       const boatPos = boat.model.position;
       const boatRot = boat.model.rotation.y;
       const waterLevel = boat.waterLevel;
       
       if (this.isPointerLocked) {
+        if(this.cameraMode === 'free') {
         // Mouse look camera - rotate around boat based on mouse input
         // Use dynamic follow distance for zoom
         const distance = this.followDistance;
-        const height = 5;
+        const height = 5 * this.followDistance / 2 ;
         
         const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
         const y = boatPos.y + Math.sin(this.cameraPitch) * distance + height;
@@ -190,7 +189,21 @@ export class CameraController {
         
         this.camera.position.set(x, y, z);
         this.camera.lookAt(boatPos);
+        } else {       
+           // Mouse look camera - rotate around boat based on mouse input
+        // Use dynamic follow distance for zoom
+        const distance = this.followDistance;
+        const height = 5 ;
+        
+        const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
+        const y = boatPos.y + Math.sin(this.cameraPitch) * distance + height;
+        const z = boatPos.z + Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
+        
+        this.camera.position.set(x, y, z);
+        this.camera.lookAt(boatPos);}
       } else {
+        
+
         // Original follow camera behavior
         const distance = 10;
         const height = 5;
