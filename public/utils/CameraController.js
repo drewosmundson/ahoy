@@ -1,12 +1,10 @@
 // CameraController.js - Handles all camera-related functionality
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/controls/OrbitControls.js';
-
 export class CameraController {
   constructor(camera, canvas) {
     this.camera = camera;
     this.canvas = canvas;
-    this.cameraMode = 'follow'; // free
-
+    this.cameraMode = 'follow'; // topView
     this.height = 5;
     
     // Mouse look properties
@@ -16,7 +14,7 @@ export class CameraController {
     this.cameraPitch = 0;
     this.mouseSensitivity = 0.002;
     this.isPointerLocked = false;
-    this.maxPitch = Math.PI / 2 - 0.1;
+    this.maxPitch = Math.PI / 2;
     
     // Zoom properties for pointer-locked mode
     this.followDistance = 10; // Default distance
@@ -28,7 +26,7 @@ export class CameraController {
     this.initMouseLook();
     this.initScrollZoom();
   }
-
+  
   initControls() {
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
@@ -37,44 +35,83 @@ export class CameraController {
     this.controls.zoomSpeed = 0.5;
     this.controls.update();
   }
-
+  
   initMouseLook() {
     this.canvas.addEventListener('click', () => {
       this.requestPointerLock();
     });
-
+    
     document.addEventListener('pointerlockchange', () => {
       this.isPointerLocked = document.pointerLockElement === this.canvas;
       if (this.isPointerLocked) {
+        // Calculate current camera orientation when entering pointer lock
+        this.preserveCameraOrientation();
         console.log('Pointer locked - mouse look enabled');
       } else {
         console.log('Pointer unlocked - mouse look disabled');
       }
     });
-
+    
     document.addEventListener('mousemove', (event) => {
       if (this.isPointerLocked) {
         this.handleMouseMove(event);
       }
     });
-
+    
     document.addEventListener('keydown', (event) => {
       if (event.code === 'Escape' && this.isPointerLocked) {
         document.exitPointerLock();
       }
     });
   }
-
+  
+  // New method to preserve camera orientation when entering pointer lock
+  preserveCameraOrientation() {
+    // Get the current camera position and the boat position
+    const boat = this.getBoatReference(); // You'll need to store a reference to the boat
+    if (!boat) return;
+    
+    const boatPos = boat.model.position;
+    const camPos = this.camera.position;
+    
+    // Calculate the direction vector from boat to camera
+    const direction = {
+      x: camPos.x - boatPos.x,
+      y: camPos.y - boatPos.y,
+      z: camPos.z - boatPos.z
+    };
+    
+    // Calculate yaw (horizontal rotation)
+    this.cameraYaw = Math.atan2(direction.x, direction.z);
+    
+    // Calculate pitch (vertical rotation)
+    const horizontalDistance = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+    this.cameraPitch = Math.atan2(direction.y - this.height, horizontalDistance);
+    
+    // Clamp pitch to limits
+    this.cameraPitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
+    
+    console.log(`Preserved orientation - Yaw: ${this.cameraYaw.toFixed(2)}, Pitch: ${this.cameraPitch.toFixed(2)}`);
+  }
+  
+  // Method to store boat reference (call this from your main game loop)
+  setBoatReference(boat) {
+    this.boatReference = boat;
+  }
+  
+  getBoatReference() {
+    return this.boatReference;
+  }
+  
   initScrollZoom() {
     // Add wheel event listener for zoom control
     this.canvas.addEventListener('wheel', (event) => {
-
         event.preventDefault();
         this.handleScrollZoom(event);
       
     }, { passive: false });
   }
-
+  
   handleScrollZoom(event) {
     // Determine zoom direction (positive = zoom out, negative = zoom in)
     const zoomDelta = event.deltaY > 0 ? this.zoomSpeed : -this.zoomSpeed;
@@ -87,23 +124,21 @@ export class CameraController {
     
     console.log(`Camera distance: ${this.followDistance.toFixed(1)}`);
   }
-
+  
   requestPointerLock() {
     this.canvas.requestPointerLock();
   }
-
+  
   addShake(intensity, duration) {
     this.shakeIntensity = intensity;
     this.shakeDuration = duration;
     this.shakeStartTime = Date.now();
   }
-
+  
   handleMouseMove(event) {
     if (!this.isPointerLocked) return;
-
     const movementX = event.movementX || 0;
     const movementY = event.movementY || 0;
-
     this.cameraYaw -= movementX * this.mouseSensitivity;
     this.cameraPitch += movementY * this.mouseSensitivity * 0.5;
     
@@ -116,25 +151,28 @@ export class CameraController {
     
     this.cameraPitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
   }
-
+  
   toggleCameraMode() {
-    if (this.cameraMode === 'free') {
+    if(!this.isPointerLocked){
+      return;
+    }
+    if (this.cameraMode === 'topView') {
       this.cameraMode = 'follow';
       this.controls.enabled = false;
-      this.freeCameraPosition = {
+      this.topViewCameraPosition = {
         position: this.camera.position.clone(),
         target: this.controls.target.clone()
       };
     } else {
-      this.cameraMode = 'free';
+      this.cameraMode = 'topView';
       this.controls.enabled = false;
-      this.freeCameraPosition = {
+      this.topViewCameraPosition = {
         position: this.camera.position.clone(),
         target: this.controls.target.clone()
       }
     }
   }
-
+  
   toggleMouseLook() {
     if (this.isPointerLocked) {
       document.exitPointerLock();
@@ -142,17 +180,17 @@ export class CameraController {
       this.requestPointerLock();
     }
   }
-
+  
   resetCameraRotation() {
     this.cameraYaw = 0;
     this.cameraPitch = 0;
   }
-
+  
   // Method to reset zoom distance
   resetZoom() {
     this.followDistance = 10;
   }
-
+  
   // Method to set zoom limits
   setZoomLimits(min, max) {
     this.minDistance = min;
@@ -160,35 +198,35 @@ export class CameraController {
     // Clamp current distance to new limits
     this.followDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.followDistance));
   }
-
+  
   lookRight() {
     if (!this.isPointerLocked) {
       this.cameraYaw += 0.1;
     }
   }
-
+  
   lookLeft() {
     if (!this.isPointerLocked) {
       this.cameraYaw -= 0.1;
     }
   }
-
+  
   update(boat) {
     if (boat) {
-  
-
+      // Store boat reference for orientation preservation
+      this.setBoatReference(boat);
+      
       const boatPos = boat.model.position;
       const boatRot = boat.model.rotation.y;
       const waterLevel = boat.waterLevel;
   
       if (this.isPointerLocked) {
-        if( this.cameraMode === 'free' ){
-          this.height = 5 * this.followDistance /2;
+        if( this.cameraMode === 'topView' ){
+          this.height = 5 * this.followDistance / 2;
         }
         else {
           this.height = 5;
         }
-
         const distance = this.followDistance;
         const x = boatPos.x + Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * distance;
         const y = boatPos.y + Math.sin(this.cameraPitch) * distance + this.height;
@@ -204,6 +242,7 @@ export class CameraController {
         this.camera.lookAt(boatPos);
       }
     }
+    
     if (this.shakeIntensity > 0) {
       const elapsed = Date.now() - this.shakeStartTime;
       if (elapsed < this.shakeDuration) {
@@ -217,7 +256,7 @@ export class CameraController {
       }
     }
   }
-
+  
   cleanup() {
     if (this.isPointerLocked) {
       document.exitPointerLock();
