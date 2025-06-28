@@ -11,8 +11,8 @@ export class Projectile {
     this.sideOfBoat = sideOfBoat;
     
     // Physics properties
-    this.initialSpeed = 25;
-    this.launchAngle = Math.PI / 9;
+    this.initialSpeed = 40;
+    this.launchAngle = 3.0;
     this.gravity = 9.8;
     
     // Velocity components

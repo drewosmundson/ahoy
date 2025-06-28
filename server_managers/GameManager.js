@@ -80,7 +80,6 @@ export class GameManager {
     }
   }
 
-  // NEW: Handle boat hit events
   handleBoatHit(socket, data) {
     const currentLobby = socket.currentLobby;
     
@@ -98,7 +97,6 @@ export class GameManager {
     }
   }
 
-  // NEW: Enhanced debug handler
   handleDebug(socket, data) {
     const currentLobby = socket.currentLobby;
     console.log(`Debug from ${socket.id} in lobby ${currentLobby}:`, data);
@@ -143,7 +141,6 @@ export class GameManager {
       this.handleBoatHit(socket, data);
     });
 
-    // NEW: Handle boat destroyed events
     socket.on('boatDestroyed', (data) => {
       const currentLobby = socket.currentLobby;
       if (currentLobby) {

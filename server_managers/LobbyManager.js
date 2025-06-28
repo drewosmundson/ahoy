@@ -10,6 +10,7 @@ export class LobbyManager {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 
+
   createLobby(socket, data) {
     const lobbyCode = this.generateLobbyCode();
     const lobbyName = data?.lobbyName || `Lobby ${lobbyCode}`;
