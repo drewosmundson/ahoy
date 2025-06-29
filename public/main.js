@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let heightmapOverlay = null;
   let currentLobbyId = null;
   let multiplayer = false;
+  let currentScreen = 'mainMenu'; // Track current screen for navigation
 
   try {
     socket = io();
@@ -62,8 +63,113 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /////////////////////////////////////////////////////
-  // Navigation Functions
+  // Navigation System with History API
   /////////////////////////////////////////////////////
+
+  // Navigation state management
+  const navigationStates = {
+    mainMenu: { screen: 'mainMenu', title: 'Ahoy.io - Main Menu' },
+    singlePlayerMenu: { screen: 'singlePlayerMenu', title: 'Ahoy.io - Single Player' },
+    createLobby: { screen: 'createLobby', title: 'Ahoy.io - Create Lobby' },
+    joinLobby: { screen: 'joinLobby', title: 'Ahoy.io - Join Lobby' },
+    hostLobby: { screen: 'hostLobby', title: 'Ahoy.io - Host Lobby', lobbyId: null },
+    participantLobby: { screen: 'participantLobby', title: 'Ahoy.io - Participant Lobby', lobbyId: null },
+    game: { screen: 'game', title: 'Ahoy.io - Game' }
+  };
+
+  function pushNavigationState(stateName, additionalData = {}) {
+    const state = { ...navigationStates[stateName], ...additionalData };
+    currentScreen = stateName;
+    
+    // Update browser history
+    history.pushState(state, state.title, `#${stateName}`);
+    document.title = state.title;
+    
+    console.log('Pushed navigation state:', stateName, state);
+  }
+
+  function navigateToScreen(stateName, additionalData = {}, pushState = true) {
+    console.log('Navigating to screen:', stateName);
+    
+    // Update current screen tracking
+    currentScreen = stateName;
+    
+    // Push to history if requested (default behavior)
+    if (pushState) {
+      pushNavigationState(stateName, additionalData);
+    }
+    
+    // Hide all screens first
+    hideAllScreens();
+    
+    // Show the appropriate screen
+    switch (stateName) {
+      case 'mainMenu':
+        mainMenuScreen.classList.remove('hidden');
+        break;
+      case 'singlePlayerMenu':
+        singlePlayerMenuScreen.classList.remove('hidden');
+        break;
+      case 'createLobby':
+        createLobbyScreen.classList.remove('hidden');
+        break;
+      case 'joinLobby':
+        joinLobbyScreen.classList.remove('hidden');
+        break;
+      case 'hostLobby':
+        hostLobbyScreen.classList.remove('hidden');
+        break;
+      case 'participantLobby':
+        participantLobbyScreen.classList.remove('hidden');
+        break;
+      case 'game':
+        homeScreen.style.display = 'none';
+        gameCanvas.style.display = 'block';
+        break;
+    }
+  }
+
+  // Handle browser back/forward button
+  window.addEventListener('popstate', (event) => {
+    console.log('Popstate event:', event.state);
+    
+    if (event.state) {
+      const stateName = event.state.screen;
+      
+      // Handle special cases for lobby screens
+      if ((stateName === 'hostLobby' || stateName === 'participantLobby') && !currentLobbyId) {
+        // If we're supposed to be in a lobby but don't have a lobby ID, go to main menu
+        navigateToScreen('mainMenu', {}, false);
+        return;
+      }
+      
+      // Handle game screen
+      if (stateName === 'game' && !game) {
+        // If we're supposed to be in game but don't have a game instance, go back appropriately
+        if (currentLobbyId) {
+          navigateToScreen(host ? 'hostLobby' : 'participantLobby', { lobbyId: currentLobbyId }, false);
+        } else {
+          navigateToScreen('mainMenu', {}, false);
+        }
+        return;
+      }
+      
+      // Normal navigation
+      navigateToScreen(stateName, event.state, false);
+    } else {
+      // No state means we're at the initial page load
+      navigateToScreen('mainMenu', {}, false);
+    }
+  });
+
+  // Initialize navigation on page load
+  function initializeNavigation() {
+    // Set initial state
+    const initialState = navigationStates.mainMenu;
+    history.replaceState(initialState, initialState.title, '#mainMenu');
+    document.title = initialState.title;
+    currentScreen = 'mainMenu';
+  }
 
   function hideAllScreens() {
     [
@@ -76,8 +182,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ].forEach(screen => {
       if (screen) screen.classList.add('hidden');
     });
+    
+    // Also handle game screen visibility
+    if (gameCanvas.style.display === 'block') {
+      homeScreen.style.display = 'block';
+      gameCanvas.style.display = 'none';
+    }
   }
 
+  // Enhanced leave lobby function that respects navigation
+  function leaveLobbyAndNavigate() {
+    if (currentLobbyId) {
+      socket.emit('leaveLobbyRequest');
+      currentLobbyId = null;
+      host = true;
+    }
+    navigateToScreen('mainMenu');
+  }
 
   /////////////////////////////////////////////////////
   // Game Start
@@ -85,8 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Single Player
   singlePlayerMenuButton?.addEventListener('click', () => {
-    hideAllScreens();
-    singlePlayerMenuScreen.classList.remove('hidden');
+    navigateToScreen('singlePlayerMenu');
   });
 
   singlePlayerStartButton?.addEventListener('click', () => {
@@ -95,15 +215,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startGameForSinglePlayer() {
     multiplayer = false;
-    hideAllScreens();
-    homeScreen.style.display = 'none';
-    gameCanvas.style.display = 'block';
+    navigateToScreen('game');
 
     game = new Game(gameCanvas, socket, multiplayer, heightmap, heightmapOverlay);
     game.start();
     window.game = game; // For debugging
   }
-
 
   /////////////////////////////////////////////////////
   // Menu Event Handlers
@@ -111,8 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Create Lobby
   createLobbyMenuButton?.addEventListener('click', () => {
-    hideAllScreens();
-    createLobbyScreen.classList.remove('hidden');
+    navigateToScreen('createLobby');
   });
 
   createLobbyButton?.addEventListener('click', () => {
@@ -122,8 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Join Lobby
   joinLobbyMenuButton?.addEventListener('click', () => {
-    hideAllScreens();
-    joinLobbyScreen.classList.remove('hidden');
+    navigateToScreen('joinLobby');
   });
 
   joinLobbyButton?.addEventListener('click', () => {
@@ -138,9 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
   /////////////////////////////////////////////////////
 
   socket.on('lobbyCreated', (data) => {
-    hideAllScreens();
-    hostLobbyScreen.classList.remove('hidden');
-
     currentLobbyId = data.lobbyId;
     host = true;
 
@@ -152,12 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updatePlayerList(data.players);
+    
+    // Navigate to host lobby screen
+    navigateToScreen('hostLobby', { lobbyId: data.lobbyId });
   });
 
   socket.on('lobbyJoined', (data) => {
-    hideAllScreens();
-    participantLobbyScreen.classList.remove('hidden');
-
     currentLobbyId = data.lobbyId;
     host = false;
 
@@ -176,6 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(startGameForPlayer, 100);
       }
     }
+    
+    // Navigate to participant lobby screen
+    navigateToScreen('participantLobby', { lobbyId: data.lobbyId });
   });
 
   socket.on('lobbyUpdated', (data) => {
@@ -184,13 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socket.on('gameStarted', (data) => {
     multiplayer = true;
-    hideAllScreens();
-    homeScreen.style.display = 'none';
-    gameCanvas.style.display = 'block';
+    
     if(heightmap == null){
       socket.emit("debug");
     }
 
+    navigateToScreen('game');
+    
     game = new Game(gameCanvas, socket, multiplayer, heightmap, heightmapOverlay);
     game.start();
     window.game = game;
@@ -204,6 +319,9 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('error', (data) => {
     console.error('Socket error:', data.message);
     alert(data.message);
+    
+    // On error, navigate back to main menu
+    navigateToScreen('mainMenu');
   });
 
   /////////////////////////////////////////////////////
@@ -226,8 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   leaveLobbyButtons.forEach(button => {
     button?.addEventListener('click', () => {
-      socket.emit('leaveLobbyRequest');
-      showMainMenu();
+      leaveLobbyAndNavigate();
     });
   });
 
@@ -236,4 +353,15 @@ document.addEventListener('DOMContentLoaded', () => {
       socket.emit('startGame', { lobbyId: currentLobbyId });
     }
   });
+
+  // Handle socket disconnection - navigate to main menu
+  socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+    currentLobbyId = null;
+    host = true;
+    navigateToScreen('mainMenu');
+  });
+
+  // Initialize navigation system
+  initializeNavigation();
 });
