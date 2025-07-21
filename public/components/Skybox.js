@@ -48,12 +48,12 @@ export class Skybox {
       
       // Default colors for fallback
       const defaultColors = [
-        0x3366ff, // right
-        0x3366ff, // left
-        0x99ccff, // top
-        0x336633, // bottom
-        0x3366ff, // front
-        0x3366ff  // back
+        0xf1ffff, // right
+        0xf1ffff, // left
+        0xf1ffff, // top
+        0xf1ffff, // bottom
+        0xf1ffff, // front
+        0xf1ffff  // back
       ];
       
       // Create materials
