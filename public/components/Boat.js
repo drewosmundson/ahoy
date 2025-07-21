@@ -52,6 +52,15 @@ export class Boat {
     const hull = new THREE.Mesh(hullGeometry, hullMaterial);
     hull.position.y = 0.5;
     boat.add(hull);
+
+    // Create boat aft
+    const aftGeometry = new THREE.BoxGeometry(2, 1, 2);
+    const aftMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+    const aft = new THREE.Mesh(aftGeometry, aftMaterial);
+    aft.position.y = 0.5;
+    aft.position.z = 3;
+    aft.rotation.y = Math.PI / 2;
+    boat.add(aft);
     
     // Create boat cabin
     const cabinGeometry = new THREE.BoxGeometry(2, 1, 2);

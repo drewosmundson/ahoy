@@ -61,8 +61,17 @@
   canvas {
     display: block;
   }
-  
-  
+  p,
+  label {
+    font:
+      1rem "Fira Sans",
+      sans-serif;
+  }
+
+  input {
+    margin: 0.4rem;
+  }
+
   /* Canvas Styling */
   /* set to 100 100 if ever an issue with margin on top or bottom */
   #gameCanvas {
