@@ -17,9 +17,6 @@ export class LobbyManager {
     const heightmapGenerator = new HeightmapGenerator();
     const heightmap = heightmapGenerator.heightmap;
     const heightmapOverlay = heightmapGenerator.heightmapOverlay;
-    
-    // Debug output
-    this.printArrayValues(heightmap);
 
     this.lobbies[lobbyCode] = {
       id: lobbyCode,

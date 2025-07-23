@@ -53,7 +53,6 @@ export class GameManager {
   }
 
   handleBoatMovement(socket, data) {
-    console.log("tests")
     const currentLobby = socket.currentLobby;
     
     if (currentLobby) {
@@ -126,7 +125,6 @@ export class GameManager {
     socket.on('playerUpdate', (data) => {
       this.handlePlayerMovement(socket, data);
     });
-
 
     socket.on('projectileFired', (data) => {
       this.handleProjectileFired(socket, data);
