@@ -190,7 +190,7 @@ export class Boat {
     const distance = boatPosition.distanceTo(projectilePosition);
     
     // More reasonable collision radius (boat hull is 3x6 units)
-    const collisionRadius = 2; 
+    const collisionRadius = 9; 
     
     if (distance < collisionRadius) {
       // Destroy projectile immediately
@@ -200,7 +200,7 @@ export class Boat {
       // Apply damage to this boat
       this.takeDamage(25);
 
-      // Emit hit event for multiplayer coordination
+      // debuging delete later
       if (this.socket && this.multiplayer) {
         this.socket.emit('debug', {
           message: 'Projectile hit',
@@ -369,7 +369,8 @@ export class Boat {
       this.model.visible = true;
       
       // Create respawn effect
-      this.createRespawnEffect();
+      const position = this.model.position.clone();
+      this.createRespawnEffect(position);
       
       // Reset boat appearance (remove any damage effects)
       this.resetBoatAppearance();
@@ -389,11 +390,9 @@ export class Boat {
     }
   }
 
-  createRespawnEffect() {
+  createRespawnEffect(position) {
     if (!this.model) return;
-    
-    const position = this.model.position.clone();
-    
+
     // Create golden light effect
     const lightGeometry = new THREE.SphereGeometry(4, 16, 16);
     const lightMaterial = new THREE.MeshBasicMaterial({ 
@@ -502,16 +501,7 @@ export class Boat {
   showDamageEffect() {
     // Create a brief red flash effect
     if (this.model) {
-      this.model.traverse((child) => {
-        if (child.material && child.material.color) {
-          const originalColor = child.material.color.clone();
-          child.material.color.setHex(0xFF0000); // Red
-          
-          setTimeout(() => {
-            child.material.color.copy(originalColor);
-          }, 200);
-        }
-      });
+
     }
   }
 

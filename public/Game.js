@@ -186,7 +186,9 @@ export class Game {
       console.log(`Enemy boat created for ${playerId}. Total enemy boats:`, Object.keys(this.enemyBoats).length);
     }
   }
-
+  enemyBoatExplotion(data) {
+    const { position } = data;
+  }
 
   enemyFiredProjectile(data) {
     const { position, rotation, sideOfBoat } = data;
