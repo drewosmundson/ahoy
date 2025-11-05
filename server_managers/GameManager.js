@@ -144,6 +144,7 @@ export class GameManager {
       if (currentLobby) {
         console.log(`Boat destroyed: ${data.playerId}`);
         this.io.to(currentLobby).emit('boatDestroyed', {
+          position: data.position,
           playerId: data.playerId,
           destroyer: socket.id,
           timestamp: Date.now()

@@ -18,7 +18,7 @@ export class Boat {
     this.maxHealth = 100;
     this.isAlive = true;
     this.isRespawning = false;
-    this.respawnTime = 5000; // 5 seconds respawn time
+    this.respawnTime = 1000; // 1 seconds respawn time 
     this.respawnStartTime = 0;
     
     // Multiplayer properties
@@ -190,7 +190,7 @@ export class Boat {
     const distance = boatPosition.distanceTo(projectilePosition);
     
     // More reasonable collision radius (boat hull is 3x6 units)
-    const collisionRadius = 9; 
+    const collisionRadius = 8; 
     
     if (distance < collisionRadius) {
       // Destroy projectile immediately
@@ -238,6 +238,7 @@ export class Boat {
       // Emit boat destroyed event for multiplayer
       if (this.socket && this.multiplayer) {
         this.socket.emit('boatDestroyed', {
+          position: this.model.position.clone(),
           playerId: this.socket.id,
           timestamp: Date.now()
         });
@@ -260,7 +261,8 @@ export class Boat {
     }
     
     // Create death effect
-    this.createDeathEffect();
+    const position = this.model.position.clone();
+    this.createDeathEffect(position);
     
     // Start respawn timer
     setTimeout(() => {
@@ -268,10 +270,8 @@ export class Boat {
     }, this.respawnTime);
   }
 
-  createDeathEffect() {
+  createDeathEffect(position) {
     if (!this.model) return;
-    
-    const position = this.model.position.clone();
     
     // Create explosion effect
     const explosionGeometry = new THREE.SphereGeometry(5, 16, 16);

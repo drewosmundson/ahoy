@@ -86,7 +86,9 @@ export class Game {
 
   initMultiplayerEvents() {
     if (!this.socket) return;
-
+    this.socket.on('boatDestroyed', (data) => {
+      this.boatDestroyed(data);
+    })
     // Handle enemy projectiles
     this.socket.on('enemyProjectileFired', (data) => {
       this.enemyFiredProjectile(data);
@@ -186,8 +188,9 @@ export class Game {
       console.log(`Enemy boat created for ${playerId}. Total enemy boats:`, Object.keys(this.enemyBoats).length);
     }
   }
-  enemyBoatExplotion(data) {
-    const { position } = data;
+  boatDestroyed(data) {
+    this.boat.createDeathEffect(data.position);
+    
   }
 
   enemyFiredProjectile(data) {
