@@ -4,6 +4,8 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.m
 
 export class Projectile {
   constructor(scene, waterLevel, terrain, boatPositionX, boatPositionZ, rotation, sideOfBoat) {
+    this.right = 1.5708;
+    this.left = 4.71239;
     this.scene = scene; 
     this.waterLevel = waterLevel;
     this.terrain = terrain;
@@ -26,7 +28,8 @@ export class Projectile {
 
     // Create projectile model
     this.model = this.createProjectileModel();
-    this.setPositionAndRotation(boatPositionX, waterLevel, boatPositionZ, rotation, sideOfBoat )
+
+    this.setPositionAndRotation(boatPositionX, waterLevel, boatPositionZ, rotation, sideOfBoat)
     
     // Add to scene
     this.scene.add(this.model);
@@ -53,9 +56,15 @@ export class Projectile {
   
   setPositionAndRotation(x, y, z, rotation, sideOfBoat) {
     if (!this.model) return;
-    
+
+    if(sideOfBoat == 2) {
+      sideOfBoat = this.right;
+    }
+    if(sideOfBoat == 0) {
+      sideOfBoat = this.left;
+    }
     this.model.position.set(x, y, z);
-    const launchDirection = rotation + sideOfBoat;
+    const launchDirection = rotation + 3.14 ; // + sideOfBoat;
     
     // Calculate initial velocity components
     this.velocityX = Math.sin(launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);

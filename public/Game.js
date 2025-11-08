@@ -208,6 +208,7 @@ export class Game {
   }
 
   playerFiredProjectile(sideOfBoat) {
+
     if (!this.isAlive || !this.socket) {
       return;
     }

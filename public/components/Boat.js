@@ -10,8 +10,8 @@ export class Boat {
     this.terrain = terrain;
     
     // Movement properties
-    this.speed = 0.2;
-    this.rotationSpeed = 0.03;
+    this.speed = 0.1;
+    this.rotationSpeed = 0.013;
     
     // Health properties
     this.health = 100;

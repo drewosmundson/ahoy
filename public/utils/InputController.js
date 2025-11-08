@@ -2,8 +2,6 @@
 export class InputController {
     constructor(game) {
       this.game = game;
-      this.right = 1.5708;
-      this.left = 4.71239;
       // Boat movement state
       this.boatMovement = {
         forward: false,
@@ -40,16 +38,8 @@ export class InputController {
         event.preventDefault();
       });
     }
-    
     handleMouseDown(event) {
-      switch(event.button) {
-        case 0: // Left mouse button
-          this.game.playerFiredProjectile(this.left);
-          break;
-        case 2: // Right mouse button
-          this.game.playerFiredProjectile(this.right);
-          break;
-      }
+      this.game.playerFiredProjectile(event.button);
     }
     
     handleKeyDown(event) {
