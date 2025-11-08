@@ -32,14 +32,15 @@ export class Game {
     this.initSound();
     this.initLighting();
     this.initComponents();
-    this.initMultiplayerEvents();
-
-
-
-    if (this.multiplayer && this.socket && !this.eventListenersAdded) {
-      this.setupMultiplayerListeners();
-      this.eventListenersAdded = true;
+ 
+    if (this.multiplayer && this.socket) {
+      this.initMultiplayerEvents();
     }
+    if(!this.multiplayer) {
+      this.initEnemyAI();
+    }
+
+
     window.addEventListener('resize', this.handleWindowResize);
     this.handleWindowResize();
   }
@@ -86,25 +87,29 @@ export class Game {
 
   initMultiplayerEvents() {
     if (!this.socket) return;
+
+    this.socket.off('boatDestroyed');
     this.socket.on('boatDestroyed', (data) => {
       this.boatDestroyed(data);
     })
+
     // Handle enemy projectiles
+    this.socket.off('enemyProjectileFired');
     this.socket.on('enemyProjectileFired', (data) => {
       this.enemyFiredProjectile(data);
     });
-
-  }
-
-  setupMultiplayerListeners() {
     // Clean up existing listeners
+    // change to enemy boat update location
     this.socket.off('playerUpdate');
-    
     this.socket.on('playerUpdate', (data) => {
-      console.log('Received playerUpdate:', data);
       this.updateEnemyBoatPosition(data);
     });
   }
+  initEnemyAI() {
+
+    return;
+  }
+
 
   updateEnemyBoatInterpolation() {
     const currentTime = Date.now();
