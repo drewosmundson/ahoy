@@ -3,7 +3,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js';
 
 export class Projectile {
-  constructor(scene, waterLevel, terrain, boatPositionX, boatPositionZ, rotation, sideOfBoat) {
+  constructor(scene, waterLevel, terrain, boatPositionX, boatPositionZ, rotation, sideOfBoat, cameraYaw, cameraPitch) {
     this.right = 1.5708;
     this.left = 4.71239;
     this.scene = scene; 
@@ -13,8 +13,8 @@ export class Projectile {
     this.sideOfBoat = sideOfBoat;
     
     // Physics properties
-    this.initialSpeed = 80;
-    this.launchAngle = 3.05;
+    this.initialSpeed = 70;
+    this.launchAngle = 3.06;
     this.gravity = 9.8;
     
     // Velocity components
@@ -29,7 +29,7 @@ export class Projectile {
     // Create projectile model
     this.model = this.createProjectileModel();
 
-    this.setPositionAndRotation(boatPositionX, waterLevel, boatPositionZ, rotation, sideOfBoat)
+    this.setPositionAndRotation(boatPositionX, waterLevel, boatPositionZ, rotation, sideOfBoat, cameraYaw, cameraPitch)
     
     // Add to scene
     this.scene.add(this.model);
@@ -57,14 +57,10 @@ export class Projectile {
   setPositionAndRotation(x, y, z, rotation, sideOfBoat) {
     if (!this.model) return;
 
-    if(sideOfBoat == 2) {
-      sideOfBoat = this.right;
-    }
-    if(sideOfBoat == 0) {
-      sideOfBoat = this.left;
-    }
+
     this.model.position.set(x, y, z);
-    const launchDirection = rotation + 3.14 ; // + sideOfBoat;
+    //const launchDirection = rotation; // if you want locked in position
+    const launchDirection = (sideOfBoat)  ; // + sideOfBoat;
     
     // Calculate initial velocity components
     this.velocityX = Math.sin(launchDirection) * this.initialSpeed * Math.cos(this.launchAngle);

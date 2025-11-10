@@ -1,44 +1,8 @@
-// GameManager.js - Enhanced with hit detection and debugging
+// Game Manager Class handles all of the communication from servers to
+// lobbies that have started a game
 export class GameManager {
-  constructor(io, lobbyManager) {
+  constructor(io) {
     this.io = io;
-    this.lobbyManager = lobbyManager;
-  }
-
-  startGame(socket) {
-    const currentLobby = socket.currentLobby;
-    
-    console.log("Start game button pressed");
-    
-    if (currentLobby && this.lobbyManager.getLobby(currentLobby) && 
-        this.lobbyManager.getLobby(currentLobby).host === socket.id) {
-      
-      console.log("Current lobby host confirmed");
-      
-      this.lobbyManager.updateLobby(currentLobby, { gameStarted: true });
-      this.io.to(currentLobby).emit("gameStarted");
-      
-      console.log("Game started for lobby", currentLobby);
-    }
-  }
-
-  handleTerrainGenerated(socket, terrainData) {
-    const currentLobby = socket.currentLobby;
-    const lobby = this.lobbyManager.getLobby(currentLobby);
-    
-    if (currentLobby && lobby && lobby.host === socket.id) {
-      this.lobbyManager.updateLobby(currentLobby, {
-        terrainData: terrainData,
-        gameStarted: true
-      });
-
-      const gameStartedData = {
-        terrainData: terrainData.terrainData
-      };
-
-      socket.to(currentLobby).emit("gameStarted", gameStartedData);
-      socket.to(currentLobby).emit("terrainDataReceived", gameStartedData);
-    }
   }
 
   handlePlayerMovement(socket, data) {
@@ -114,13 +78,6 @@ export class GameManager {
     console.log(`Player ${socket.id} connected for game events`);
     
     // Game-related event handlers
-    socket.on("startGame", (data) => {
-      this.startGame(socket, data);
-    });
-
-    socket.on("terrainGenerated", (terrainData) => {
-      this.handleTerrainGenerated(socket, terrainData);
-    });
 
     socket.on('playerUpdate', (data) => {
       this.handlePlayerMovement(socket, data);

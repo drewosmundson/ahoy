@@ -1,5 +1,10 @@
 import { HeightmapGenerator } from '../server_utils/HeightmapGenerator.js';
 
+// make the heigtmap use a seed for everyone to use the same map
+// or run on the server so that there is reduced loading times creating a map
+// and a bunch of predetermined heightmaps are ready to go
+
+
 export class LobbyManager {
   constructor(io) {
     this.io = io;
@@ -10,7 +15,37 @@ export class LobbyManager {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 
+  startGame(socket) {
+    if (socket.currentLobby && this.getLobby(socket.currentLobby) && 
+        this.getLobby(socket.currentLobby).host === socket.id) {
+      
+      console.log("Current lobby host confirmed");
+      
+      this.updateLobby(socket.currentLobby, { gameStarted: true });
+      this.io.to(socket.currentLobby).emit("gameStarted");
+      
+      console.log("Game started for lobby", socket.currentLobby);
+    }
+  }
 
+  handleTerrainGenerated(socket, terrainData) {
+    const currentLobby = socket.currentLobby;
+    const lobby = this.getLobby(currentLobby);
+    
+    if (currentLobby && lobby && lobby.host === socket.id) {
+      this.updateLobby(currentLobby, {
+        terrainData: terrainData,
+        gameStarted: true
+      });
+
+      const gameStartedData = {
+        terrainData: terrainData.terrainData
+      };
+
+      socket.to(currentLobby).emit("gameStarted", gameStartedData);
+      socket.to(currentLobby).emit("terrainDataReceived", gameStartedData);
+    }
+  }
   createLobby(socket, data) {
     const lobbyCode = this.generateLobbyCode();
     const lobbyName = data?.lobbyName || `Lobby ${lobbyCode}`;
@@ -198,6 +233,13 @@ export class LobbyManager {
 
   handleConnection(socket) {
     // Lobby-related event handlers
+    socket.on("startGame", (data) => {
+      this.startGame(socket, data);
+    });
+
+    socket.on("terrainGenerated", (terrainData) => {
+      this.handleTerrainGenerated(socket, terrainData);
+    });
     socket.on("createLobbyRequest", (data) => {
       this.createLobby(socket, data);
     });

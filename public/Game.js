@@ -219,6 +219,9 @@ export class Game {
     }
     const position = this.boat.getPosition();
     const rotation = this.boat.getRotation();
+    const cameraYaw = this.cameraController.cameraYaw;
+    const cameraPitch = this.cameraController.cameraPitch;
+
     const projectile = new Projectile(
       this.scene,
       this.waterLevel,
@@ -226,7 +229,9 @@ export class Game {
       position.x,
       position.z,
       rotation,
-      sideOfBoat
+      sideOfBoat,
+      cameraYaw,
+      cameraPitch
     );
     this.projectiles.push(projectile);
     if (this.multiplayer) {

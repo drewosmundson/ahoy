@@ -20,8 +20,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize managers
 const lobbyManager = new LobbyManager(io);
-const gameManager = new GameManager(io, lobbyManager);
+const gameManager = new GameManager(io);
 
+//create premade heightmaps
+// const numberOfPremadeMaps = 10;
+
+// for(number in numberOfPremadeMaps ) {
+  
+// 
 // Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
