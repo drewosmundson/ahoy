@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { LobbyManager } from './server_managers/LobbyManager.js';
-import { GameManager } from './server_managers/GameManager.js';
+import { GameManager } from './server_managers/GameEventManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
