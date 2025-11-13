@@ -1,5 +1,5 @@
 import { HeightmapGenerator } from '../server_utils/HeightmapGenerator.js';
-import { Player } from './server_components/Player.js'
+
 
 // make the heigtmap use a seed for everyone to use the same map
 // or run on the server so that there is reduced loading times creating a map

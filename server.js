@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { LobbyManager } from './server_managers/LobbyManager.js';
-import { GameManager } from './server_managers/GameEventManager.js';
+import { GameManager } from './server_managers/GameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,8 +19,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize managers
-const lobbyManager = new LobbyManager(io);
-const gameManager = new GameManager(io);
+const lobbyManager = new LobbyManager(io); // there is one of these running 
+const gameManager = new GameManager(io); 
 
 //create premade heightmaps
 // const numberOfPremadeMaps = 10;
@@ -28,22 +28,29 @@ const gameManager = new GameManager(io);
 // for(number in numberOfPremadeMaps ) {
   
 // 
-// Start server
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+// get nessage from main.js here to start multiplayer server
 
 // Handle socket connections
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
   
   // Initialize handlers for this socket
-  lobbyManager.handleConnection(socket);
-  gameManager.handleConnection(socket);
+  socket.on("multiplayer", () => {
+    lobbyManager.handleConnection(socket);
+    gameManager.handleConnection(socket);    // remove this line have lobby manager add user to 
+    // game manager once they start a sessiion that requires it
+  });
   
   socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);
     lobbyManager.handleDisconnection(socket);
     gameManager.handleDisconnection(socket);
   });
+});
+
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
