@@ -1,10 +1,20 @@
+// Drew Osmundson
+// drewosmundson.github.io
+
+// server.js
+// This is the entry point for this program
+
+// Naming scheme for event handling:
+// events sent from the server are in past tense
+// events sent from a client are in present tense
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { LobbyManager } from './server_managers/LobbyManager.js';
 
+import { LobbyManager } from './server_managers/LobbyManager.js';
+import { GameManager } from './server_managers/GameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,36 +29,32 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize managers
-const lobbyManager = new LobbyManager(io); // there is one of these running 
-const gameManager = new GameManager(io); 
-
+const lobbyManager = new LobbyManager(); // there is one of these running 
+const gameManager = new GameManager();
 //create premade heightmaps
 // const numberOfPremadeMaps = 10;
-
-// for(number in numberOfPremadeMaps ) {
+// for(number in numberOfPremadeMaps ) {}
   
-// 
-
-// get nessage from main.js here to start multiplayer server
-
 // Handle socket connections
+// if the user selects a multiplayer option handle lobby connection.
 io.on("connection", (socket) => {
-  console.log(`Player connected: ${socket.id}`);
-  
-  // Initialize handlers for this socket
-  socket.on("addToLobby", () => {
-    lobbyManager.handleConnection(socket);
 
-    // game manager once they start a sessiion that requires it
+  socket.on("connectToLobby", () => {
+    lobbyManager.handleConnection(socket);
   });
-  
-  socket.on("disconnect", () => {
-    console.log(`Player disconnected: ${socket.id}`);
+
+  socket.on("disconnectFromLobby", () => {
     lobbyManager.handleDisconnection(socket);
+  });
+
+  socket.on("connectToGame", () => {
+    gameManager.handleConnection(socket);
+  });
+
+  socket.on("disconnectFromGame", () => {
     gameManager.handleDisconnection(socket);
   });
 });
-
 
 // Start server
 server.listen(PORT, () => {
