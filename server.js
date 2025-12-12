@@ -1,17 +1,6 @@
 // Drew Osmundson
 // drewosmundson.github.io
 
-
-
-
-// bundler build with Vite 
-
-
-
-
-
-
-
 // server.js
 // This is the entry point for this program
 
@@ -24,8 +13,8 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { LobbyManager } from './server_events/MultiplayerLobbyEvents.js';
-import { GameManager } from './server_events/MultiplayerGameEvents.js';
+import { LobbyManager } from './server_managers/LobbyManager.js';
+import { GameManager } from './server_managers/GameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,7 +29,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize managers
-const lobbyManager = new LobbyManager(); 
+const lobbyManager = new LobbyManager(); // there is one of these running 
 const gameManager = new GameManager();
 //create premade heightmaps
 // const numberOfPremadeMaps = 10;

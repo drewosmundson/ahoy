@@ -1,7 +1,9 @@
 import { Game } from './Game.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  /////////////////////////////////////////////////////
   // DOM Elements
+  /////////////////////////////////////////////////////
 
   // Main Menu
   const homeScreen = document.getElementById('homeScreen');

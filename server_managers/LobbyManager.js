@@ -10,9 +10,6 @@ export class LobbyManager {
     this.socketList = {};
   }
   
-
-
-
   // Lobby-related event handlers
   handleConnection(socket) {
     //this.getTime = timeOfLastRequest;
@@ -20,6 +17,7 @@ export class LobbyManager {
     socket.on("createLobby", (data) => {
       //if(timeOfLastRequest + 5seconds > this.getTime()){}
       this.createLobby(socket, data);
+      //else {}
     });
 
     socket.on("joinLobby", (data) => {
@@ -36,26 +34,38 @@ export class LobbyManager {
   }
 
   createLobby(socket, data) {
-    const lobbyId = this.generateLobbyCode();
-    const socketId = socket.id;
+    const lobbyCode = this.generateLobbyCode();
+    const lobbyName = data?.lobbyName || `Lobby ${lobbyCode}`;
 
-    const newLobby = new Lobby(socketId);
-    const newPlayer = new Player(socketId);
-
-
-
-
-    this.lobbies[lobbyCode] = newLobby;
+    const newPlayer = this.createNewPlayer();
+    // TODO combine these tree lines into two and make noise generator and Heightmap Generator one Class
+    const heightmapGenerator = new HeightmapGenerator();
+    const heightmap = heightmapGenerator.heightmap;
+    const heightmapOverlay = heightmapGenerator.heightmapOverlay;
 
 
+ 
 
+    this.lobbies[lobbyCode] = {
+      id: lobbyCode,
+      host: socket.id,
+      heightmap: heightmap,
+      heightmapOverlay: heightmapOverlay,
+      gameStarted: false,
+      // players: [newPlayer],
+      players: [{
+        id: socket.id,
+        name: `Player ${socket.id.substr(0, 4)}`,
+        isHost: true,
+        health: 100,
+        maxHealth: 100,
+        alive: true
+      }],
     };
 
     socket.join(lobbyCode);
     socket.currentLobby = lobbyCode;
     console.log(`Lobby created: ${lobbyCode} by ${socket.id}`);
-
-
     socket.emit("lobbyCreated", {
       lobbyId: lobbyCode,
       lobbyName,
