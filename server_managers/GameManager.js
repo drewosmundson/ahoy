@@ -1,7 +1,9 @@
 // Game Manager Class handles all of the communication from servers to
 // lobbies that have started a game
 export class GameManager {
-
+  constructor(io) {
+    this.io = io;
+  }
 
   handlePlayerMovement(socket, data) {
     const currentLobby = socket.currentLobby;
@@ -58,10 +60,25 @@ export class GameManager {
     }
   }
 
-
+  handleDebug(socket, data) {
+    const currentLobby = socket.currentLobby;
+    console.log(`Debug from ${socket.id} in lobby ${currentLobby}:`, data);
+    
+    // Optionally broadcast debug info to other clients for testing
+    if (currentLobby && data) {
+      socket.to(currentLobby).emit('debugInfo', {
+        from: socket.id,
+        data: data,
+        timestamp: Date.now()
+      });
+    }
+  }
 
   handleConnection(socket) {
+    console.log(`Player ${socket.id} connected for game events`);
+    
     // Game-related event handlers
+
     socket.on('playerUpdate', (data) => {
       this.handlePlayerMovement(socket, data);
     });
@@ -94,6 +111,7 @@ export class GameManager {
   }
 
   handleDisconnection(socket) {
+    console.log(`Player ${socket.id} disconnected from game`);
     // Game-specific cleanup if needed
     // Most cleanup is handled by LobbyManager
   }

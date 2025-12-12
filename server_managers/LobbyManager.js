@@ -1,76 +1,29 @@
-import { HeightmapGenerator } from '/server_utils/HeightmapGenerator.js';
-import { Lobby } from '/server_components/Lobby.js';
+import { HeightmapGenerator } from '../server_utils/HeightmapGenerator.js';
+
 // make the heigtmap use a seed for everyone to use the same map
 // or run on the server so that there is reduced loading times creating a map
 // and a bunch of predetermined heightmaps are ready to go
 
+
 export class LobbyManager {
-  constructor() {
+  constructor(io) {
+    this.io = io;
     this.lobbies = {};
-    this.socketList = {};
-  }
-  
-
-
-
-  // Lobby-related event handlers
-  handleConnection(socket) {
-    //this.getTime = timeOfLastRequest;
-    //this.socketList[socket] = {timeOfLastRequest}
-    socket.on("createLobby", (data) => {
-      //if(timeOfLastRequest + 5seconds > this.getTime()){}
-      this.createLobby(socket, data);
-    });
-
-    socket.on("joinLobby", (data) => {
-      this.joinPlayerToLobby(socket, data);
-    });
-
-    socket.on("startGame", (data) => {
-      this.startGame(socket, data);
-    });
-
-    socket.on("leaveLobby", () => {
-      this.leaveLobby(socket);
-    });
   }
 
-  createLobby(socket, data) {
-    const lobbyId = this.generateLobbyCode();
-    const socketId = socket.id;
-
-    const newLobby = new Lobby(socketId);
-    const newPlayer = new Player(socketId);
-
-
-
-
-    this.lobbies[lobbyCode] = newLobby;
-
-
-
-    };
-
-    socket.join(lobbyCode);
-    socket.currentLobby = lobbyCode;
-    console.log(`Lobby created: ${lobbyCode} by ${socket.id}`);
-
-
-    socket.emit("lobbyCreated", {
-      lobbyId: lobbyCode,
-      lobbyName,
-      players: this.lobbies[lobbyCode].players,
-      heightmap: this.lobbies[lobbyCode].heightmap,
-      heightmapOverlay: this.lobbies[lobbyCode].heightmapOverlay
-    });
+  generateLobbyCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
-
-
 
   startGame(socket) {
-    if(this.getLobby(socket.currentLobby).host === socket.id) {
+    if (socket.currentLobby && this.getLobby(socket.currentLobby) && 
+        this.getLobby(socket.currentLobby).host === socket.id) {
+      
+      console.log("Current lobby host confirmed");
+      
       this.updateLobby(socket.currentLobby, { gameStarted: true });
       this.io.to(socket.currentLobby).emit("gameStarted");
+      
       console.log("Game started for lobby", socket.currentLobby);
     }
   }
@@ -93,7 +46,47 @@ export class LobbyManager {
       socket.to(currentLobby).emit("terrainDataReceived", gameStartedData);
     }
   }
+  createLobby(socket, data) {
+    const lobbyCode = this.generateLobbyCode();
+    const lobbyName = data?.lobbyName || `Lobby ${lobbyCode}`;
+    const heightmapGenerator = new HeightmapGenerator();
+    const heightmap = heightmapGenerator.heightmap;
+    const heightmapOverlay = heightmapGenerator.heightmapOverlay;
 
+    this.lobbies[lobbyCode] = {
+      id: lobbyCode,
+      host: socket.id,
+      heightmap: heightmap,
+      heightmapOverlay: heightmapOverlay,
+      players: [{
+        id: socket.id,
+        name: `Player ${socket.id.substr(0, 4)}`,
+        isHost: true,
+        health: 100,
+        maxHealth: 100,
+        alive: true
+      }],
+      settings: {
+        gameMode: "noBots",
+        terrainType: "default"
+      },
+      gameStarted: false,
+      chatMessages: []
+    };
+
+    socket.join(lobbyCode);
+    socket.currentLobby = lobbyCode;
+
+    console.log(`Lobby created: ${lobbyCode} by ${socket.id}`);
+
+    socket.emit("lobbyCreated", {
+      lobbyId: lobbyCode,
+      lobbyName,
+      players: this.lobbies[lobbyCode].players,
+      heightmap: this.lobbies[lobbyCode].heightmap,
+      heightmapOverlay: this.lobbies[lobbyCode].heightmapOverlay
+    });
+  }
 
   joinLobby(socket, data) {
     const { lobbyId } = data;
@@ -238,15 +231,36 @@ export class LobbyManager {
     }
   }
 
+  handleConnection(socket) {
+    // Lobby-related event handlers
+    socket.on("startGame", (data) => {
+      this.startGame(socket, data);
+    });
 
-  // util functions
+    socket.on("terrainGenerated", (terrainData) => {
+      this.handleTerrainGenerated(socket, terrainData);
+    });
+    socket.on("createLobbyRequest", (data) => {
+      this.createLobby(socket, data);
+    });
+
+    socket.on("joinLobbyRequest", (data) => {
+      this.joinLobby(socket, data);
+    });
+
+    socket.on("leaveLobbyRequest", () => {
+      this.leaveLobby(socket);
+    });
+
+    socket.on("confirmGameStart", (data) => {
+      this.confirmGameStart(socket, data);
+    });
+  }
+
+  // Getters for other managers
   getLobby(lobbyId) {
     return this.lobbies[lobbyId];
   }
-  generateLobbyCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  }
-
 
   updateLobby(lobbyId, updateData) {
     if (this.lobbies[lobbyId]) {

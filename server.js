@@ -1,31 +1,10 @@
-// Drew Osmundson
-// drewosmundson.github.io
-
-
-
-
-// bundler build with Vite 
-
-
-
-
-
-
-
-// server.js
-// This is the entry point for this program
-
-// Naming scheme for event handling:
-// events sent from the server are in past tense
-// events sent from a client are in present tense
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-import { LobbyManager } from './server_events/MultiplayerLobbyEvents.js';
-import { GameManager } from './server_events/MultiplayerGameEvents.js';
+import { LobbyManager } from './server_managers/LobbyManager.js';
+import { GameManager } from './server_managers/GameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,34 +19,31 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize managers
-const lobbyManager = new LobbyManager(); 
-const gameManager = new GameManager();
+const lobbyManager = new LobbyManager(io);
+const gameManager = new GameManager(io);
+
 //create premade heightmaps
 // const numberOfPremadeMaps = 10;
-// for(number in numberOfPremadeMaps ) {}
+
+// for(number in numberOfPremadeMaps ) {
   
-// Handle socket connections
-// if the user selects a multiplayer option handle lobby connection.
-io.on("connection", (socket) => {
-
-  socket.on("connectToLobby", () => {
-    lobbyManager.handleConnection(socket);
-  });
-
-  socket.on("disconnectFromLobby", () => {
-    lobbyManager.handleDisconnection(socket);
-  });
-
-  socket.on("connectToGame", () => {
-    gameManager.handleConnection(socket);
-  });
-
-  socket.on("disconnectFromGame", () => {
-    gameManager.handleDisconnection(socket);
-  });
-});
-
+// 
 // Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle socket connections
+io.on("connection", (socket) => {
+  console.log(`Player connected: ${socket.id}`);
+  
+  // Initialize handlers for this socket
+  lobbyManager.handleConnection(socket);
+  gameManager.handleConnection(socket);
+  
+  socket.on("disconnect", () => {
+    console.log(`Player disconnected: ${socket.id}`);
+    lobbyManager.handleDisconnection(socket);
+    gameManager.handleDisconnection(socket);
+  });
 });
