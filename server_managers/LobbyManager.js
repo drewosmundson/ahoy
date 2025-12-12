@@ -1,5 +1,5 @@
 import { HeightmapGenerator } from '../server_utils/HeightmapGenerator.js';
-import { GameManager } from './server_managers/GameManager.js';
+
 
 // make the heigtmap use a seed for everyone to use the same map
 // or run on the server so that there is reduced loading times creating a map
@@ -11,6 +11,7 @@ export class LobbyManager {
     this.io = io;
     this.lobbies = {};
   }
+
 
   generateLobbyCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();

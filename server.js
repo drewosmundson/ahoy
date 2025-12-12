@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { LobbyManager } from './server_managers/LobbyManager.js';
-
+import { GameManager } from './server_managers/GameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,9 +36,9 @@ io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
   
   // Initialize handlers for this socket
-  socket.on("addToLobby", () => {
+  socket.on("multiplayer", () => {
     lobbyManager.handleConnection(socket);
-
+    gameManager.handleConnection(socket);    // remove this line have lobby manager add user to 
     // game manager once they start a sessiion that requires it
   });
   
