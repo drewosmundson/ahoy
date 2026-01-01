@@ -14,16 +14,14 @@ export class LobbyManager {
   generateLobbyCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
-
+  //this.lobbies[socket.currentLobby]
   startGame(socket) {
-    if (socket.currentLobby && this.getLobby(socket.currentLobby) && 
-        this.getLobby(socket.currentLobby).host === socket.id) {
-      
-      console.log("Current lobby host confirmed");
-      
+    if (socket.currentLobby && this.lobbies[socket.currentLobby] && 
+       this.lobbies[socket.currentLobby].host === socket.id) {
+
       this.updateLobby(socket.currentLobby, { gameStarted: true });
       this.io.to(socket.currentLobby).emit("gameStarted");
-      
+
       console.log("Game started for lobby", socket.currentLobby);
     }
   }
