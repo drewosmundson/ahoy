@@ -8,7 +8,7 @@ import { HeightmapGenerator } from '../server_utils/HeightmapGenerator.js';
 export class LobbyManager {
   constructor(io) {
     this.io = io;
-    this.lobbies = {};
+    this.lobbies = new Map();
   }
 
   generateLobbyCode() {

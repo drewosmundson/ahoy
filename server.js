@@ -22,16 +22,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error(reason);
 });
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down.');
-  process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down.');
-  process.exit(0);
-});
-
 // ---- Wrap one time startup in bootstrap function ----
 function bootstrap() {
   const PORT = process.env.PORT || 3000;
@@ -62,26 +52,20 @@ function bootstrap() {
   const lobbyManager = new LobbyManager(io);
   const gameManager = new GameManager(io);
 
-  // Handle socket connections
-  try {
-    io.on("connection", (socket) => {
-      console.log(`Player connected: ${socket.id}`);
 
-      // Initialize handlers for this socket
-      lobbyManager.handleConnection(socket);
-      gameManager.handleConnection(socket);
+  io.on("connection", (socket) => {
+    console.log(`Player connected: ${socket.id}`);
 
-      socket.on("disconnect", () => {
-        console.log(`Player disconnected: ${socket.id}`);
-        lobbyManager.handleDisconnection(socket);
-        gameManager.handleDisconnection(socket);
-      });
+    // Initialize handlers for this socket
+    lobbyManager.handleConnection(socket);
+    gameManager.handleConnection(socket);
+
+    socket.on("disconnect", () => {
+      console.log(`Player disconnected: ${socket.id}`);
+      lobbyManager.handleDisconnection(socket);
+      gameManager.handleDisconnection(socket);
     });
-  } catch(err) {
-      console.error("socket connection error");
-      console.error(err);
-      socket.disconnect(true);
-  }
+  });
 }
 
 // ---- Start server ----
