@@ -1,8 +1,4 @@
-
-
-
-
-class Lobby {
+export class Lobby {
   constructor ({id, hostId, heightmap, heightmapOverlay}) {
     this.id = id;
     this.hostId = hostId,
@@ -25,28 +21,18 @@ class Lobby {
     this.players.set(player.id, player);
   }
 
-  removePlayer(player) {
-    this.players.delete(socketId);
+removePlayerById(playerId) {
+  this.players.delete(playerId);
+}
 
-    //if (this.players.size === 0) {
-    //   return 'EMPTY';
-    // }
+startGame(socket) {
+  const lobby = this.lobbies.get(socket.currentLobby);
+  if (!lobby) return;
 
-    // if (socketId === this.hostId) {
-    //   const [nextHost] = this.players.values();
-    //   nextHost.isHost = true;
-    //   this.hostId = nextHost.id;
-    // }
+  lobby.startGame(socket.id);
+  this.io.to(lobby.id).emit("gameStarted");
+}
 
-    // return 'OK';
-  }
-  startGame(bySocketId) {
-    if (bySocketId !== this.hostId) {
-      throw new Error('Only host can start');
-    }
-    if (this.gameStarted) return;
-    this.gameStarted = true;
-  }
 
 
   setTerrain(bySocketId, terrainData) {
@@ -70,3 +56,4 @@ class Lobby {
     };
   }
 }
+
