@@ -10,7 +10,10 @@ export class Lobby {
     this.terrainData = null;
   }
 
-
+  /**
+   * @param {player} 
+   * 
+   */
   addPlayer(player) {
     if (this.gameStarted){throw new Error("game already started") // change later to allow players to join later.
     }

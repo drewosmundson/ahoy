@@ -22,7 +22,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error(reason);
 });
 
-// ---- Wrap one time startup in bootstrap function ----
+// ---- Wrap startup in bootstrap function for error logging ----
 function bootstrap() {
   const PORT = process.env.PORT || 3000;
 
