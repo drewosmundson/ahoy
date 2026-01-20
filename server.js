@@ -57,7 +57,7 @@ function bootstrap() {
     console.log(`Player connected: ${socket.id}`);
 
     // Initialize handlers for this socket
-    lobbyManager.handleConnection(socket);
+    lobbyManager.initializeSockets(socket);
     gameManager.handleConnection(socket);
 
     socket.on("disconnect", () => {
